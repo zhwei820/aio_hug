@@ -31,10 +31,22 @@ class Type(object):
        Override `__call__` to define how the type should be transformed and validated
     """
     _hug_type = True
-    __slots__ = ()
+    __slots__ = ('constraints', )
+
+    def __init__(self, *constraints):
+        self.constraints = constraints or ()
+
+    def cast(self, value):
+        raise NotImplementedError('To implement a new type a cast method must be defined')
+
+    def validate(self, value):
+        for constraints in self.constraints:
+            self.constraint(value)
 
     def __call__(self, value):
-        raise NotImplementedError('To implement a new type __call__ must be defined')
+        value = self.cast(value)
+        self.validate(value)
+        return value
 
 
 class Accept(Type):
