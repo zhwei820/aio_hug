@@ -355,6 +355,7 @@ class URLRouter(HTTPRouter):
             self.route['prefixes'] = (prefixes, ) if isinstance(prefixes, str) else prefixes
 
     def __call__(self, api_function):
+        # need to do this step lazily
         api = self.route.get('api', hug.api.from_object(api_function))
         (interface, callable_method) = self._create_interface(api, api_function)
 
