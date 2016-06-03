@@ -16,7 +16,7 @@ Changelog
 - Fixed nested async calls so that they reuse the same loop
 - Added HTTP method named (get, post, etc) routers to the API router to be consistent with documentation
 - Added smart handling of empty JSON content (issue #300)
-- Fixed issues with URL routes being order dependant
+- Fixed issues with URL routes being order dependent
 
 ### 2.1.2
 - Fixed an issue with sharing exception handlers accross multiple modules (Thanks @soloman1124)
