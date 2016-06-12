@@ -355,33 +355,36 @@ class URLRouter(HTTPRouter):
             self.route['prefixes'] = (prefixes, ) if isinstance(prefixes, str) else prefixes
 
     def __call__(self, api_function):
-        # need to do this step lazily
         api = self.route.get('api', hug.api.from_object(api_function))
-        (interface, callable_method) = self._create_interface(api, api_function)
 
-        use_examples = self.route.get('examples', ())
-        if not interface.required and not use_examples:
-            use_examples = (True, )
+        def future_route(api=api):
+            (interface, callable_method) = self._create_interface(api, api_function)
 
-        for base_url in self.route.get('urls', ("/{0}".format(api_function.__name__), )):
-            expose = [base_url, ]
-            for suffix in self.route.get('suffixes', ()):
-                if suffix.startswith('/'):
-                    expose.append(os.path.join(base_url, suffix.lstrip('/')))
-                else:
-                    expose.append(base_url + suffix)
-            for prefix in self.route.get('prefixes', ()):
-                expose.append(prefix + base_url)
-            for url in expose:
-                handlers = api.http.routes.setdefault(url, {})
-                for method in self.route.get('accept', ()):
-                    version_mapping = handlers.setdefault(method.upper(), {})
-                    for version in self.route['versions']:
-                        version_mapping[version] = interface
-                        api.http.versioned.setdefault(version, {})[callable_method.__name__] = callable_method
+            use_examples = self.route.get('examples', ())
+            if not interface.required and not use_examples:
+                use_examples = (True, )
 
-        interface.examples = use_examples
-        return callable_method
+            for base_url in self.route.get('urls', ("/{0}".format(api_function.__name__), )):
+                expose = [base_url, ]
+                for suffix in self.route.get('suffixes', ()):
+                    if suffix.startswith('/'):
+                        expose.append(os.path.join(base_url, suffix.lstrip('/')))
+                    else:
+                        expose.append(base_url + suffix)
+                for prefix in self.route.get('prefixes', ()):
+                    expose.append(prefix + base_url)
+                for url in expose:
+                    handlers = api.http.routes.setdefault(url, {})
+                    for method in self.route.get('accept', ()):
+                        version_mapping = handlers.setdefault(method.upper(), {})
+                        for version in self.route['versions']:
+                            version_mapping[version] = interface
+                            api.http.versioned.setdefault(version, {})[callable_method.__name__] = callable_method
+
+            interface.examples = use_examples
+
+        api.http.add_future_route(future_route)
+        return api_function
 
     def urls(self, *urls, **overrides):
         """Sets the URLs that will map to this API call"""

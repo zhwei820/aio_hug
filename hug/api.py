@@ -74,7 +74,8 @@ class InterfaceAPI(object):
 class HTTPInterfaceAPI(InterfaceAPI):
     """Defines the HTTP interface specific API"""
     __slots__ = ('routes', 'versions', 'base_url', '_output_format', '_input_format', 'versioned', '_middleware',
-                 '_not_found_handlers', '_startup_handlers', 'sinks', '_not_found', '_exception_handlers')
+                 '_not_found_handlers', '_startup_handlers', 'sinks', '_not_found', '_exception_handlers',
+                 '_future_routes')
 
     def __init__(self, api, base_url=''):
         super().__init__(api)
@@ -83,6 +84,17 @@ class HTTPInterfaceAPI(InterfaceAPI):
         self.sinks = OrderedDict()
         self.versioned = OrderedDict()
         self.base_url = base_url
+        self._future_routes = []
+
+    def add_future_route(self, handler):
+        self._future_routes.append(handler)
+
+    def wake_up(self):
+        for future_route in self._future_routes:
+            future_route(self)
+
+        for startup_handler in self.startup_handlers:
+            startup_handler(self)
 
     @property
     def output_format(self):
@@ -150,6 +162,9 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
         for startup_handler in (http_api.startup_handlers or ()):
             self.add_startup_handler(startup_handler)
+
+        for future_route in (http_api.future_routes or ()):
+            self.add_future_route(future_route)
 
         for version, handler in getattr(self, '_exception_handlers', {}).items():
             for exception_type, exception_handler in handler.items():
@@ -287,8 +302,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
         base_url = self.base_url if base_url is None else base_url
 
         not_found_handler = default_not_found
-        for startup_handler in self.startup_handlers:
-            startup_handler(self)
+        self.wake_up()
+
         if self.not_found_handlers:
             if len(self.not_found_handlers) == 1 and None in self.not_found_handlers:
                 not_found_handler = self.not_found_handlers[None]
