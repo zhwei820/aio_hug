@@ -1,4 +1,3 @@
-
 import sys
 
 collect_ignore = []

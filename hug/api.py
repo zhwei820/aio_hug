@@ -75,7 +75,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
     """Defines the HTTP interface specific API"""
     __slots__ = ('routes', 'versions', 'base_url', '_output_format', '_input_format', 'versioned', '_middleware',
                  '_not_found_handlers', '_startup_handlers', 'sinks', '_not_found', '_exception_handlers',
-                 '_future_routes')
+                 '_future_routes', 'awake')
 
     def __init__(self, api, base_url=''):
         super().__init__(api)
@@ -84,17 +84,22 @@ class HTTPInterfaceAPI(InterfaceAPI):
         self.sinks = OrderedDict()
         self.versioned = OrderedDict()
         self.base_url = base_url
+        self.awake = False
         self._future_routes = []
 
     def add_future_route(self, handler):
         self._future_routes.append(handler)
 
     def wake_up(self):
-        for future_route in self._future_routes:
-            future_route(self)
+        if not self.awake:
+            for future_route in self._future_routes:
+                future_route(self)
 
-        for startup_handler in self.startup_handlers:
-            startup_handler(self)
+            for startup_handler in self.startup_handlers:
+                startup_handler(self)
+            self.awake = True
+            return True
+        return False
 
     @property
     def output_format(self):
