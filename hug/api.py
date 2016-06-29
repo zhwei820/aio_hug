@@ -92,15 +92,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
         self._future_routes.append(handler)
 
     def wake_up(self):
-        if not self.awake:
-            for future_route in self._future_routes:
-                future_route(self)
-
-            for startup_handler in self.startup_handlers:
-                startup_handler(self)
-            self.awake = True
-            return True
-        return False
+        while self._future_routes:
+            self._future_routes.pop()(self.api)
 
     @property
     def output_format(self):
