@@ -345,6 +345,10 @@ def test_versioning():
     def echo(text, api_version):
         return api_version
 
+    @hug.get('/echo', versions=False)  # noqa
+    def echo(text):
+        return "No Versions"
+
     assert hug.test.get(api, 'v1/echo', text="hi").data == 'hi'
     assert hug.test.get(api, 'v2/echo', text="hi").data == "Echo: hi"
     assert hug.test.get(api, 'v3/echo', text="hi").data == "Echo: hi"
@@ -352,7 +356,7 @@ def test_versioning():
     assert hug.test.get(api, 'echo', text="hi", headers={'X-API-VERSION': '3'}).data == "Echo: hi"
     assert hug.test.get(api, 'v4/echo', text="hi").data == "Not Implemented"
     assert hug.test.get(api, 'v7/echo', text="hi").data == 7
-    assert hug.test.get(api, 'echo', text="hi").data == "Not Implemented"
+    assert hug.test.get(api, 'echo', text="hi").data == "No Versions"
     assert hug.test.get(api, 'echo', text="hi", api_version=3, body={'api_vertion': 4}).data == "Echo: hi"
 
     with pytest.raises(ValueError):
@@ -707,6 +711,16 @@ def test_extending_api_with_exception_handler():
         return (tests.module_fake_simple, )
 
     assert hug.test.get(api, '/fake_simple/exception').data == 'it works!'
+
+
+def test_extending_api_with_base_url():
+    """Test to ensure it's possible to extend the current API with a specified base URL"""
+    @hug.extend_api('/fake', base_url='/api')
+    def extend_with():
+        import tests.module_fake
+        return (tests.module_fake, )
+
+    assert hug.test.get(api, '/api/v1/fake/made_up_api').data
 
 
 def test_cli():

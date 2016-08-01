@@ -196,6 +196,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
         versions_list = list(versions)
         if None in versions_list:
             versions_list.remove(None)
+        if False in versions_list:
+            versions_list.remove(False)
         if api_version is None and len(versions_list) > 0:
             api_version = max(versions_list)
             documentation['version'] = api_version
@@ -206,6 +208,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
         for url, methods in self.routes.items():
             for method, method_versions in methods.items():
                 for version, handler in method_versions.items():
+                    if getattr(handler, 'private', False):
+                        continue
                     if version is None:
                         applies_to = versions
                     else:
@@ -215,7 +219,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
                             continue
                         doc = version_dict.setdefault(url, OrderedDict())
                         doc[method] = handler.documentation(doc.get(method, None), version=version,
-                                                            base_url=base_url, url=url)
+                                                            base_url=handler.api.http.base_url or base_url, url=url)
 
         documentation['handlers'] = version_dict
         return documentation
@@ -288,8 +292,9 @@ class HTTPInterfaceAPI(InterfaceAPI):
         request_version = self.determine_version(request, api_version)
         if request_version:
             request_version = int(request_version)
-        versions.get(request_version, versions.get(None, not_found))(request, response, api_version=api_version,
-                                                                     **kwargs)
+        versions.get(request_version or False, versions.get(None, not_found))(request, response,
+                                                                              api_version=api_version,
+                                                                              **kwargs)
 
     def server(self, default_not_found=True, base_url=None):
         """Returns a WSGI compatible API server for the given Hug API module"""
@@ -316,6 +321,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
         for url, methods in self.routes.items():
             router = {}
+            router_base_url = base_url
+
             for method, versions in methods.items():
                 method_function = "on_{0}".format(method.lower())
                 if len(versions) == 1 and None in versions.keys():
@@ -323,11 +330,14 @@ class HTTPInterfaceAPI(InterfaceAPI):
                 else:
                     router[method_function] = partial(self.version_router, versions=versions,
                                                       not_found=not_found_handler)
+                for version, handler in versions.items():
+                    router_base_url = handler.api.http.base_url or router_base_url
+                    break
 
             router = namedtuple('Router', router.keys())(**router)
-            falcon_api.add_route(base_url + url, router)
+            falcon_api.add_route(router_base_url + url, router)
             if self.versions and self.versions != (None, ):
-                falcon_api.add_route(base_url + '/v{api_version}' + url, router)
+                falcon_api.add_route(router_base_url + '/v{api_version}' + url, router)
 
         def error_serializer(_, error):
             return (self.output_format.content_type,
@@ -434,11 +444,13 @@ class API(object, metaclass=ModuleSingleton):
             self._context = {}
         return self._context
 
-    def extend(self, api, route=""):
+    def extend(self, api, route="", base_url=None):
         """Adds handlers from a different Hug API to this one - to create a single API"""
         api = API(api)
 
         if hasattr(api, '_http'):
+            if base_url is not None:
+                api.http.base_url = base_url
             self.http.extend(api.http, route)
 
         for directive in getattr(api, '_directives', {}).values():
