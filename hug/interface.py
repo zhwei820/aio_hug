@@ -62,7 +62,16 @@ except ImportError:  # pragma: no cover
         raise NotImplementedError()
 
 
-class Interfaces(object):
+class FunctionSingleton(type):
+    """Defines the function level `.interface` singleton"""
+
+    def __call__(cls, function, *args, **kwargs):
+        if not hasattr(function, 'interface'):
+            function.__dict__['interface'] = super().__call__(function, *args, **kwargs)
+        return function.interface
+
+
+class Interfaces(object, metaclass=FunctionSingleton):
     """Defines the per-function singleton applied to hugged functions defining common data needed by all interfaces"""
 
     def __init__(self, function):
@@ -123,16 +132,14 @@ class Interface(object):
     """
     __slots__ = ('interface', 'api', 'defaults', 'parameters', 'required', 'outputs', 'on_invalid', 'requires',
                  'validate_function', 'transform', 'examples', 'output_doc', 'wrapped', 'directives',
-                 'raise_on_invalid', 'invalid_outputs')
+                 'raise_on_invalid', 'invalid_outputs', 'finalized')
 
     def __init__(self, route, function):
+        self.interface = Interfaces(function)
         self.api = route.get('api', hug.api.from_object(function))
         if 'examples' in route:
             self.examples = route['examples']
-        if not hasattr(function, 'interface'):
-            function.__dict__['interface'] = Interfaces(function)
 
-        self.interface = function.interface
         self.requires = route.get('requires', ())
         if 'validate' in route:
             self.validate_function = route['validate']
@@ -166,10 +173,19 @@ class Interface(object):
         elif self.transform:
             self.on_invalid = self.transform
 
+        self.finalized = False
+
+    def finalize(self, api=None):
+        """Finalizes the interface specifying the API it will run against"""
+        if self.finalized:
+            return
+
+        self.api = api or self.api
         defined_directives = self.api.directives()
         used_directives = set(self.parameters).intersection(defined_directives)
         self.directives = {directive_name: defined_directives[directive_name] for directive_name in used_directives}
         self.directives.update(self.interface.directives)
+        self.finalized = True
 
     def validate(self, input_parameters):
         """Runs all set type transformers / validators against the provided input parameters and returns any errors"""
@@ -254,6 +270,7 @@ class Local(Interface):
             self.skip_validation = True
 
         self.interface.local = self
+        self.finalize()
 
     def __get__(self, instance, kind):
         """Support instance methods"""
@@ -384,8 +401,9 @@ class CLI(Interface):
                     sys.stdout.buffer.write(b'\n')
         return data
 
-    def __call__(self):
+    def __call__(self, api=None):
         """Calls the wrapped function through the lens of a CLI ran command"""
+        self.finalize(api)
         for requirement in self.requires:
             conclusion = requirement(request=sys.argv, module=self.api.module)
             if conclusion and conclusion is not True:
@@ -424,9 +442,9 @@ class HTTP(Interface):
         self.parse_body = 'parse_body' in route
         self.set_status = route.get('status', False)
         self.response_headers = tuple(route.get('response_headers', {}).items())
-        self.outputs = route.get('output', self.api.http.output_format)
 
-        self._params_for_outputs = introspect.takes_arguments(self.outputs, *self.AUTO_INCLUDE)
+
+
         self._params_for_transform = introspect.takes_arguments(self.transform, *self.AUTO_INCLUDE)
 
         if 'output_invalid' in route:
@@ -442,6 +460,14 @@ class HTTP(Interface):
 
         self.interface.http = self
 
+    def finalize(api=None):
+        if self.finalized:
+            return
+
+        super().finalize(api)
+        self.outputs = route.get('output', self.api.http.output_format)
+        self._params_for_outputs = introspect.takes_arguments(self.outputs, *self.AUTO_INCLUDE)
+
     def gather_parameters(self, request, response, api_version=None, **input_parameters):
         """Gathers and returns all parameters that will be used for this endpoint"""
         input_parameters.update(request.params)
@@ -449,7 +475,7 @@ class HTTP(Interface):
             body = request.stream
             content_type, content_params = parse_content_type(request.content_type)
             body_formatter = body and self.api.http.input_format(content_type)
-            if body_formatter:
+            if body_formatter:s
                 body = body_formatter(body, **content_params)
             if 'body' in self.parameters:
                 input_parameters['body'] = body

@@ -76,7 +76,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
     """Defines the HTTP interface specific API"""
     __slots__ = ('routes', 'versions', 'base_url', '_output_format', '_input_format', 'versioned', '_middleware',
                  '_not_found_handlers', '_startup_handlers', 'sinks', '_not_found', '_exception_handlers',
-                 '_future_routes', 'awake')
+                 'future_routes')
 
     def __init__(self, api, base_url=''):
         super().__init__(api)
@@ -85,15 +85,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
         self.sinks = OrderedDict()
         self.versioned = OrderedDict()
         self.base_url = base_url
-        self.awake = False
-        self._future_routes = []
-
-    def add_future_route(self, handler):
-        self._future_routes.append(handler)
-
-    def wake_up(self):
-        while self._future_routes:
-            self._future_routes.pop()(self.api)
+        self.unfinalized = []
+        self.future_routes = []
 
     @property
     def output_format(self):
@@ -150,6 +143,10 @@ class HTTPInterfaceAPI(InterfaceAPI):
         """Adds handlers from a different Hug API to this one - to create a single API"""
         self.versions.update(http_api.versions)
 
+        for future_route in http_api.future_routes:
+            if route:
+                for url in future_route['
+            self.future_routes.append(future_route)
         for item_route, handler in http_api.routes.items():
             self.routes[route + item_route] = handler
 
@@ -301,8 +298,6 @@ class HTTPInterfaceAPI(InterfaceAPI):
         base_url = self.base_url if base_url is None else base_url
 
         not_found_handler = default_not_found
-        self.wake_up()
-
         if self.not_found_handlers:
             if len(self.not_found_handlers) == 1 and None in self.not_found_handlers:
                 not_found_handler = self.not_found_handlers[None]
