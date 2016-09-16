@@ -1,6 +1,6 @@
-"""tests/test_store.py.
+"""tests/test_api.py.
 
-Tests to ensure that the native stores work correctly.
+Tests to ensure the API object that stores the state of each individual hug endpoint works as expected
 
 Copyright (C) 2016 Timothy Edmund Crosley
 
@@ -19,36 +19,22 @@ CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFT
 OTHER DEALINGS IN THE SOFTWARE.
 
 """
-import pytest
+import hug
+from aiohttp import web, MsgType
 
-from hug.exceptions import StoreKeyNotFound
-from hug.store import InMemoryStore
+api = hug.API(__name__)
 
-stores_to_test = [
-    InMemoryStore()
-]
+@hug.post("/async_test", versions = '1')
+async def async_test(request, response, aa):
+    return {"code": 0, "message": "test ok!"}
 
 
-@pytest.mark.parametrize('store', stores_to_test)
-def test_stores_generically(store):
-    key = 'test-key'
-    data = {
-        'user': 'foo',
-        'authenticated': False
-    }
+@hug.get("/async_test", versions = '2')
+async def async_test1(request, response, aa:hug.types.number):
+    ''' doc for this end point
+    '''
+    return 'test'
+    # return web.json_response({'hello': 'world'})   
 
-    # Key should not exist
-    assert not store.exists(key)
+print(dir(__hug__.http.serve()))
 
-    # Set key with custom data, verify the key exists and expect correct data to be returned
-    store.set(key, data)
-    assert store.exists(key)
-    assert store.get(key) == data
-
-    # Expect exception if unknown session key was requested
-    with pytest.raises(StoreKeyNotFound):
-        store.get('unknown')
-
-    # Delete key
-    store.delete(key)
-    assert not store.exists(key)

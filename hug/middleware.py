@@ -22,7 +22,8 @@ from __future__ import absolute_import
 import logging
 import uuid
 from datetime import datetime
-
+import aiohttp
+import hug
 
 class SessionMiddleware(object):
     """Simple session middleware.
@@ -101,3 +102,18 @@ class LogMiddleware(object):
     def process_response(self, request, response, resource):
         """Logs the basic data returned by the API"""
         self.logger.info(self._generate_combined_log(request, response))
+
+
+async def not_found_middleware(app, handler):
+    async def middleware_handler(request):
+        try:
+            response = await handler(request)
+            if response.status == 404:
+                return app._not_found(request)
+            return response
+        except aiohttp.web.HTTPException as ex:
+            if ex.status == 404:
+                return app._not_found(request)
+
+            raise
+    return middleware_handler

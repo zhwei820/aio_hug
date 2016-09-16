@@ -32,15 +32,17 @@ from hug.format import content_type, underscore
 
 
 @content_type('text/plain')
-def text(body, charset='utf-8', **kwargs):
+async def text(body, charset='utf-8', **kwargs):
     """Takes plain text data"""
-    return body.read().decode(charset)
+    stream = await body.read()
+    return stream.decode(charset)
 
 
 @content_type('application/json')
-def json(body, charset='utf-8', **kwargs):
+async def json(body, charset='utf-8', **kwargs):
     """Takes JSON formatted data, converting it into native Python objects"""
-    return json_converter.loads(text(body, charset=charset))
+    stream = await body.read()
+    return json_converter.loads(stream.decode(charset))
 
 
 def _underscore_dict(dictionary):
@@ -63,19 +65,23 @@ def json_underscore(body, charset='utf-8', **kwargs):
 
 
 @content_type('application/x-www-form-urlencoded')
-def urlencoded(body, charset='ascii', **kwargs):
+async def urlencoded(body, charset='ascii', **kwargs):
     """Converts query strings into native Python objects"""
-    return parse_query_string(text(body, charset=charset), False)
+    stream = await body.read()
+    return parse_query_string(stream.decode(charset), False)
 
 
-@content_type('multipart/form-data')
-def multipart(body, **header_params):
-    """Converts multipart form data into native Python objects"""
-    if header_params and 'boundary' in header_params:
-        if type(header_params['boundary']) is str:
-            header_params['boundary'] = header_params['boundary'].encode()
-    form = parse_multipart((body.stream if hasattr(body, 'stream') else body), header_params)
-    for key, value in form.items():
-        if type(value) is list and len(value) is 1:
-            form[key] = value[0]
-    return form
+@content_type('multipart/form-data')  # get from post ()
+async def multipart(body, **header_params):
+    # """Converts multipart form data into native Python objects"""
+    # if header_params and 'boundary' in header_params:
+    #     if type(header_params['boundary']) is str:
+    #         header_params['boundary'] = header_params['boundary'].encode()
+    # print(header_params)
+    # print(body)
+    # form = parse_multipart((body.stream if hasattr(body, 'stream') else body), header_params)
+    # for key, value in form.items():
+    #     if type(value) is list and len(value) is 1:
+    #         form[key] = value[0]
+    # return form
+    return {}

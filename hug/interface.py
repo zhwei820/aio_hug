@@ -27,7 +27,7 @@ import sys
 from collections import OrderedDict
 from functools import lru_cache, partial, wraps
 
-import falcon
+import aiohttp
 from falcon import HTTP_BAD_REQUEST
 
 import hug._empty as empty
@@ -38,28 +38,6 @@ from hug import introspect
 from hug.exceptions import InvalidTypeData
 from hug.format import parse_content_type
 from hug.types import MarshmallowSchema, Multiple, OneOf, SmartBoolean, Text, text
-
-try:
-    import asyncio
-
-    if sys.version_info >= (3, 4, 4):
-        ensure_future = asyncio.ensure_future  # pragma: no cover
-    else:
-        ensure_future = asyncio.async  # pragma: no cover
-
-    def asyncio_call(function, *args, **kwargs):
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            return function(*args, **kwargs)
-
-        function = ensure_future(function(*args, **kwargs), loop=loop)
-        loop.run_until_complete(function)
-        return function.result()
-
-except ImportError:  # pragma: no cover
-
-    def asyncio_call(*args, **kwargs):
-        raise NotImplementedError()
 
 
 class Interfaces(object):
@@ -114,10 +92,10 @@ class Interfaces(object):
 
     def __call__(__hug_internal_self, *args, **kwargs):
         """"Calls the wrapped function, uses __hug_internal_self incase self is passed in as a kwarg from the wrapper"""
-        if not __hug_internal_self.is_coroutine:
-            return __hug_internal_self._function(*args, **kwargs)
+        # if not __hug_internal_self.is_coroutine:
+        return __hug_internal_self._function(*args, **kwargs)
 
-        return asyncio_call(__hug_internal_self._function, *args, **kwargs)
+        # return asyncio_call(__hug_internal_self._function, *args, **kwargs)
 
 
 class Interface(object):
@@ -472,15 +450,18 @@ class HTTP(Interface):
 
         self.interface.http = self
 
-    def gather_parameters(self, request, response, api_version=None, **input_parameters):
+    async def gather_parameters(self, request, response, api_version=None, **input_parameters):
         """Gathers and returns all parameters that will be used for this endpoint"""
-        input_parameters.update(request.params)
+        paras = await request.post()
+        input_parameters.update(paras)
         if self.parse_body and request.content_length:
-            body = request.stream
+            # body = request.stream
+            body = request.content            
             content_type, content_params = parse_content_type(request.content_type)
-            body_formatter = body and self.api.http.input_format(content_type)
+            body_formatter = self.api.http.input_format(content_type) if body else ''
+            
             if body_formatter:
-                body = body_formatter(body, **content_params)
+                body = await body_formatter(body, **content_params)
             if 'body' in self.all_parameters:
                 input_parameters['body'] = body
             if isinstance(body, dict):
@@ -551,30 +532,33 @@ class HTTP(Interface):
             response.status = self.set_status
         response.content_type = self.content_type(request, response)
 
-    def render_errors(self, errors, request, response):
+    def render_errors(self, errors, request):
+        response = aiohttp.web.Response(status = 400)
         data = {'errors': errors}
         if getattr(self, 'on_invalid', False):
             data = self.on_invalid(data, **self._arguments(self._params_for_on_invalid, request, response))
 
-        response.status = HTTP_BAD_REQUEST
         if getattr(self, 'invalid_outputs', False):
             response.content_type = self.invalid_content_type(request, response)
-            response.data = self.invalid_outputs(data, **self._arguments(self._params_for_invalid_outputs,
+            response.body = self.invalid_outputs(data, **self._arguments(self._params_for_invalid_outputs,
                                                                             request, response))
         else:
-            response.data = self.outputs(data, **self._arguments(self._params_for_outputs, request, response))
+            response.body = self.outputs(data, **self._arguments(self._params_for_outputs, request, response))
+        return response
 
-    def call_function(self, **parameters):
+    async def call_function(self, **parameters):
         if not self.interface.takes_kwargs:
             parameters = {key: value for key, value in parameters.items() if key in self.all_parameters}
-
-        return self.interface(**parameters)
+        res = await self.interface(**parameters)
+        return res
 
     def render_content(self, content, request, response, **kwargs):
         if hasattr(content, 'interface') and (content.interface is True or hasattr(content.interface, 'http')):
             if content.interface is True:
+                print('interface1')
                 content(request, response, api_version=None, **kwargs)
             else:
+                print('interface2')
                 content.interface.http(request, response, api_version=None, **kwargs)
             return
 
@@ -592,7 +576,7 @@ class HTTP(Interface):
                 length = end - start + 1
                 content.seek(start)
                 response.data = content.read(length)
-                response.status = falcon.HTTP_206
+                response.status = 206
                 response.content_range = (start, end, size)
                 content.close()
             else:
@@ -600,10 +584,12 @@ class HTTP(Interface):
                 if size:
                     response.stream_len = size
         else:
-            response.data = content
+            response.body = content
+        return response
 
-    def __call__(self, request, response, api_version=None, **kwargs):
+    async def __call__(self, request, api_version=None, **kwargs):
         """Call the wrapped function over HTTP pulling information as needed"""
+        response = aiohttp.web.Response()
         api_version = int(api_version) if api_version is not None else api_version
         if not self.catch_exceptions:
             exception_types = ()
@@ -615,19 +601,20 @@ class HTTP(Interface):
 
             lacks_requirement = self.check_requirements(request, response)
             if lacks_requirement:
-                response.data = self.outputs(lacks_requirement,
+                response.body = self.outputs(lacks_requirement,
                                              **self._arguments(self._params_for_outputs, request, response))
                 return
 
-            input_parameters = self.gather_parameters(request, response, api_version, **kwargs)
+            input_parameters = await self.gather_parameters(request, response, api_version, **kwargs)
             errors = self.validate(input_parameters)
             if errors:
-                return self.render_errors(errors, request, response)
+                return self.render_errors(errors, request)
 
-            self.render_content(self.call_function(**input_parameters), request, response, **kwargs)
-        except falcon.HTTPNotFound:
-            return self.api.http.not_found(request, response, **kwargs)
+            res_content = await self.call_function(**input_parameters)
+            return self.render_content(res_content, request, response, **kwargs)
+            
         except exception_types as exception:
+            print('exception_types')
             handler = None
             if type(exception) in exception_types:
                 handler = self.api.http.exception_handlers(api_version)[type(exception)]
@@ -636,7 +623,7 @@ class HTTP(Interface):
                   tuple(self.api.http.exception_handlers(api_version).items())[::-1]:
                     if isinstance(exception, exception_type):
                         handler = exception_handler
-            handler(request=request, response=response, exception=exception, **kwargs)
+            return handler(request=request, response=response, exception=exception, **kwargs)
 
     def documentation(self, add_to=None, version=None, base_url="", url=""):
         """Returns the documentation specific to an HTTP interface"""

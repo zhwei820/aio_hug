@@ -43,6 +43,7 @@ class Object(http):
         super().__init__(urls=urls, accept=accept, output=output, **kwargs)
 
     def __call__(self, method_or_class):
+
         if isinstance(method_or_class, (MethodType, FunctionType)):
             routes = getattr(method_or_class, '_hug_routes', [])
             routes.append(self.route)
@@ -56,6 +57,7 @@ class Object(http):
         for argument in dir(instance):
             argument = getattr(instance, argument, None)
             routes = getattr(argument, '_hug_routes', None)
+
             if routes:
                 for route in routes:
                     http(**self.where(**route).route)(argument)
@@ -63,6 +65,8 @@ class Object(http):
         return method_or_class
 
     def http_methods(self, urls=None, **route_data):
+
+
         """Creates routes from a class, where the class method names should line up to HTTP METHOD types"""
         def decorator(class_definition):
             instance = class_definition
@@ -83,11 +87,16 @@ class Object(http):
         return decorator
 
 
+
+
+
+
 class API(object):
     """Provides a convient way to route functions to a single API independant of where they live"""
     __slots__ = ('api', )
 
     def __init__(self, api):
+
         if type(api) == str:
             api = hug.api.API(api)
         self.api = api
