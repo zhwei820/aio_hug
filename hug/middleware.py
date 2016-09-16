@@ -109,11 +109,11 @@ async def not_found_middleware(app, handler):
         try:
             response = await handler(request)
             if response.status == 404:
-                return app._not_found(request)
+                return await app._not_found(request)
             return response
         except aiohttp.web.HTTPException as ex:
             if ex.status == 404:
-                return app._not_found(request)
+                return await app._not_found(request)
 
             raise
     return middleware_handler

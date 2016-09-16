@@ -2,7 +2,7 @@ from os.path import isfile
 from envparse import env
 import logging
 
-log = logging.getLogger('app')
+log = logging.getLogger('qqqqapp')
 log.setLevel(logging.DEBUG)
 
 f = logging.Formatter('[L:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s', datefmt = '%d-%m-%Y %H:%M:%S')
@@ -24,7 +24,6 @@ MYSQL_DB_NAME = env.str('MYSQL_DB_NAME')
 MYSQL_USER = env.str('MYSQL_USER')
 MYSQL_PASSWORD = env.str('MYSQL_PASSWORD')
 
-PLAYERS_IN_GAME = 2
 
 STATUS = {
 	'OK': 1,
@@ -33,5 +32,5 @@ STATUS = {
 	'UPDATE_USERS': 4
 }
 
-PONG_WS_INTERVAL = 60
-DRAW = -1
+
+print(MYSQL_PASSWORD)

@@ -531,8 +531,8 @@ class HTTP(Interface):
         """Sets up the response defaults that are defined in the URL route"""
         for header_name, header_value in self.response_headers:
             response.set_header(header_name, header_value)
-        if self.set_status:
-            response.status = self.set_status
+        # if self.set_status:
+        #     response.status = self.set_status
         response.content_type = self.content_type(request, response)
 
     def render_errors(self, errors, request):

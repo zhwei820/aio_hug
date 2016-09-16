@@ -19,10 +19,11 @@ CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFT
 OTHER DEALINGS IN THE SOFTWARE.
 
 """
-import hug
+import hug, asyncio
 from aiohttp import web, MsgType
+from hug.database import init_db
+from settings import *
 
-api = hug.API(__name__)
 
 @hug.post("/async_test", versions = '1')
 async def async_test(request, response, aa):
@@ -30,11 +31,33 @@ async def async_test(request, response, aa):
 
 
 @hug.get("/async_test", versions = '2')
-async def async_test1(request, response, aa:hug.types.number):
+async def async_test1(request, response, aa:hug.types.number, bb):
     ''' doc for this end point
     '''
     return 'test'
     # return web.json_response({'hello': 'world'})   
 
-print(dir(__hug__.http.serve()))
+# if not DEBUG:
+#     @hug.not_found()
+#     async def not_found(request):
+#         return {'Nothing': 'to see'}
 
+
+app = __hug__.http.server()
+
+async def _init_db(app):
+    app.db = await init_db(
+        host=MYSQL_HOST,
+        db=MYSQL_DB_NAME,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        loop=loop
+        )
+    return app
+
+loop = asyncio.get_event_loop()
+app = loop.run_until_complete(_init_db(app))
+
+
+if __name__ == '__main__':
+    __hug__.http.serve()

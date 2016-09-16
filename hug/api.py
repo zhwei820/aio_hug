@@ -28,13 +28,13 @@ from functools import partial
 from itertools import chain
 from types import ModuleType
 # from wsgiref.simple_server import make_server
+import aiohttp_debugtoolbar
 
 import asyncio, aiohttp
 from aiohttp_session import session_middleware
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from aiohttp import web
-from hug.settings import *
-from hug.database import init_db
+# from hug.settings import *
 
 # from falcon import HTTP_METHODS
 
@@ -44,23 +44,23 @@ import hug.output_format
 from hug._version import current
 
 INTRO = """
-/#######################################################################\\
+/##########################################################################\\
           `.----``..-------..``.----.
          :/:::::--:---------:--::::://.
         .+::::----##/-/oo+:-##----:::://
-        `//::-------/oosoo-------::://.       ##    ##  ##    ##    #####
-          .-:------./++o/o-.------::-`   ```  ##    ##  ##    ##  ##
-             `----.-./+o+:..----.     `.:///. ########  ##    ## ##
-   ```        `----.-::::::------  `.-:::://. ##    ##  ##    ## ##   ####
-  ://::--.``` -:``...-----...` `:--::::::-.`  ##    ##  ##   ##   ##    ##
-  :/:::::::::-:-     `````      .:::::-.`     ##    ##    ####     ######
+        `//::-------/oosoo-------::://.          ##    ##  ##    ##    #####
+          .-:------./++o/o-.------::-`   ```     ##    ##  ##    ##  ##
+             `----.-./+o+:..----.     `.:///.aio ########  ##    ## ##
+   ```        `----.-::::::------  `.-:::://.    ##    ##  ##    ## ##   ####
+  ://::--.``` -:``...-----...` `:--::::::-.`     ##    ##  ##   ##   ##    ##
+  :/:::::::::-:-     `````      .:::::-.`        ##    ##    ####     ######
    ``.--:::::::.                .:::.`
          ``..::.      aio       .::         EMBRACE THE APIs OF THE FUTURE
-             ::-     love       .:-
+             ::-                .:-
              -::`               ::-                   VERSION {0}
              `::-              -::`
               -::-`           -::-
-\########################################################################/
+\###########################################################################/
 
  Copyright (C) 2016 Timothy Edmund Crosley
  Under the MIT License
@@ -239,23 +239,28 @@ class HTTPInterfaceAPI(InterfaceAPI):
         """Runs the basic hug development server against this API"""
         loop = asyncio.get_event_loop()
         if no_documentation:
-            serv_generator, handler, app = loop.run_until_complete(self.aio_server(loop, None))
+            app = self.aio_server(loop, None)
         else:
-            serv_generator, handler, app = loop.run_until_complete(self.aio_server(loop))
+            app = self.aio_server(loop)
+        aiohttp_debugtoolbar.setup(app, intercept_redirects=False)
+
+        handler = app.make_handler()
+        serv_generator = loop.create_server(handler, '127.0.0.1', 8701)
 
         serv = loop.run_until_complete(serv_generator)
         print(INTRO)
-        print("Serving on port {0}...".format(SITE_PORT))
+        print("Serving on port {0}...".format(8701))
 
-        log.debug('start server %s' % str(serv.sockets[0].getsockname()))
+        # log.debug('start server %s' % str(serv.sockets[0].getsockname()))
         try:
             loop.run_forever()
         except KeyboardInterrupt:
-            log.debug('Stop server begin')
+            # log.debug('Stop server begin')
+            pass
         finally:
             loop.run_until_complete(shutdown(serv, app, handler))
             loop.close()
-        log.debug('Stop server end')
+        # log.debug('Stop server end')
 
     @staticmethod
     def base_404(request, response, *kargs, **kwargs):
@@ -292,7 +297,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
         """Returns a smart 404 page that contains documentation for the written API"""
         base_url = self.base_url if base_url is None else base_url
 
-        def handle_404(request, *kargs, **kwargs):
+        async def handle_404(request, *kargs, **kwargs):
             response = aiohttp.web.Response()
             url_prefix = self.base_url
             if not url_prefix:
@@ -319,7 +324,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
                                                                               api_version=api_version,
                                                                               **kwargs)
 
-    async def aio_server(self, loop, default_not_found=True):
+    def aio_server(self, loop, default_not_found=True):
         app = web.Application(loop=loop, middlewares=[
             # session_middleware(EncryptedCookieStorage(SECRET_KEY)),
             # authorize,
@@ -327,16 +332,6 @@ class HTTPInterfaceAPI(InterfaceAPI):
             # aiohttp_debugtoolbar.middleware,
             not_found_middleware,
         ])
-        # app['websockets'] = defaultdict(list)
-        handler = app.make_handler()
-        if DEBUG:
-            aiohttp_debugtoolbar.setup(app, intercept_redirects=False)
-
-        # route part
-        # for route in routes:
-        #     app.router.add_route(route[0], route[1], route[2], name=route[3])
-
-        # ('GET', '/api/', test, 'test'),
 
         for router_base_url, routes in self.routes.items():
             for url, methods in routes.items():
@@ -351,13 +346,6 @@ class HTTPInterfaceAPI(InterfaceAPI):
                             router = versions[ver]
                             app.router.add_route(method, '/v%s' % (ver) + url, router, name=None)
 
-                # router = namedtuple('Router', router.keys())(**router)
-
-                # falcon_api.add_route(router_base_url + url, router)
-                # if self.versions and self.versions != (None, ):
-                #     falcon_api.add_route(router_base_url + '/v{api_version}' + url, router)
-                # print(self.versioned)
-
         default_not_found = self.documentation_404() if default_not_found is True else None
         not_found_handler = default_not_found
         if self.not_found_handlers:
@@ -368,20 +356,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
             not_found_handler
             app._not_found = not_found_handler
 
-        # end route part
-        # db connect
-        app.db = await init_db(
-            host=MYSQL_HOST,
-            db=MYSQL_DB_NAME,
-            user=MYSQL_USER,
-            password=MYSQL_PASSWORD,
-            loop=loop
-            )
-        # end db connect
         app.on_shutdown.append(self.on_shutdown)
-
-        serv_generator = loop.create_server(handler, SITE_HOST, SITE_PORT)
-        return serv_generator, handler, app
+        return app
 
 
     async def on_shutdown(app):
@@ -401,52 +377,12 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
     def server(self, default_not_found=True, base_url=None):
         """Returns a WSGI compatible API server for the given Hug API module"""
-        falcon_api = falcon.API(middleware=self.middleware)
-        default_not_found = self.documentation_404() if default_not_found is True else None
-        base_url = self.base_url if base_url is None else base_url
-
-        not_found_handler = default_not_found
-        for startup_handler in self.startup_handlers:
-            startup_handler(self)
-        if self.not_found_handlers:
-            if len(self.not_found_handlers) == 1 and None in self.not_found_handlers:
-                not_found_handler = self.not_found_handlers[None]
-            else:
-                not_found_handler = partial(self.version_router, api_version=False,
-                                            versions=self.not_found_handlers, not_found=default_not_found)
-                not_found_handler.interface = True
-
-        if not_found_handler:
-            falcon_api.add_sink(not_found_handler)
-            not_found_handler
-            self._not_found = not_found_handler
-
-        for sink_base_url, sinks in self.sinks.items():
-            for url, extra_sink in sinks.items():
-                falcon_api.add_sink(extra_sink, sink_base_url + url + '(?P<path>.*)')
-
-        for router_base_url, routes in self.routes.items():
-            for url, methods in routes.items():
-                router = {}
-                for method, versions in methods.items():
-                    method_function = "on_{0}".format(method.lower())
-                    if len(versions) == 1 and None in versions.keys():
-                        router[method_function] = versions[None]
-                    else:
-                        router[method_function] = partial(self.version_router, versions=versions,
-                                                          not_found=not_found_handler)
-
-                router = namedtuple('Router', router.keys())(**router)
-                falcon_api.add_route(router_base_url + url, router)
-                if self.versions and self.versions != (None, ):
-                    falcon_api.add_route(router_base_url + '/v{api_version}' + url, router)
-
-        def error_serializer(_, error):
-            return (self.output_format.content_type,
-                    self.output_format({"errors": {error.title: error.description}}))
-
-        falcon_api.set_error_serializer(error_serializer)
-        return falcon_api
+        loop = asyncio.get_event_loop()
+        if default_not_found:
+            app = self.aio_server(loop, None)
+        else:
+            app = self.aio_server(loop)
+        return app
 
     @property
     def startup_handlers(self):
