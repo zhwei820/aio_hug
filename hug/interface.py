@@ -454,6 +454,9 @@ class HTTP(Interface):
         """Gathers and returns all parameters that will be used for this endpoint"""
         paras = await request.post()
         input_parameters.update(paras)
+        paras = request.GET
+        input_parameters.update(paras)
+
         if self.parse_body and request.content_length:
             # body = request.stream
             body = request.content            
