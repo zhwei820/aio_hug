@@ -28,7 +28,6 @@ from collections import OrderedDict
 from functools import lru_cache, partial, wraps
 
 import aiohttp
-from falcon import HTTP_BAD_REQUEST
 
 import hug._empty as empty
 import hug.api

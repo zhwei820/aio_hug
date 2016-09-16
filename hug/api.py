@@ -27,16 +27,14 @@ from collections import OrderedDict, namedtuple
 from functools import partial
 from itertools import chain
 from types import ModuleType
-# from wsgiref.simple_server import make_server
 import aiohttp_debugtoolbar
 
 import asyncio, aiohttp
 from aiohttp_session import session_middleware
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from aiohttp import web
-# from hug.settings import *
+from hug.settings import *
 
-# from falcon import HTTP_METHODS
 
 from hug.middleware import not_found_middleware
 import hug.defaults
@@ -251,16 +249,16 @@ class HTTPInterfaceAPI(InterfaceAPI):
         print(INTRO)
         print("Serving on port {0}...".format(8701))
 
-        # log.debug('start server %s' % str(serv.sockets[0].getsockname()))
+        log.debug('start server %s' % str(serv.sockets[0].getsockname()))
         try:
             loop.run_forever()
         except KeyboardInterrupt:
-            # log.debug('Stop server begin')
+            log.debug('Stop server begin')
             pass
         finally:
-            loop.run_until_complete(shutdown(serv, app, handler))
+            loop.run_until_complete(self.shutdown(serv, app, handler))
             loop.close()
-        # log.debug('Stop server end')
+        log.debug('Stop server end')
 
     @staticmethod
     def base_404(request, response, *kargs, **kwargs):
@@ -356,20 +354,12 @@ class HTTPInterfaceAPI(InterfaceAPI):
             not_found_handler
             app._not_found = not_found_handler
 
-        app.on_shutdown.append(self.on_shutdown)
         return app
 
 
-    async def on_shutdown(app):
-        for key, game in app['websockets'].items():
-            for ws in game:
-                await ws.close(code=1001, message='Server shutdown')
-
-    async def shutdown(server, app, handler):
+    async def shutdown(self, server, app, handler):
         server.close()
         await server.wait_closed()
-        app.db.close()
-        await app.db.wait_closed()
         await app.shutdown()
         await handler.finish_connections(10.0)
         await app.cleanup()

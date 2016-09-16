@@ -20,35 +20,31 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 """
 from __future__ import absolute_import
+import aiohttp
 
-import falcon
-
-
-def to(location, code=falcon.HTTP_302):
+def to(location, code=302):
     """Redirects to the specified location using the provided http_code (defaults to HTTP_302 FOUND)"""
-    raise falcon.http_status.HTTPStatus(code, {'location': location})
-
+    raise aiohttp.web.HTTPFound(location)
 
 def permanent(location):
     """Redirects to the specified location using HTTP 301 status code"""
-    to(location, falcon.HTTP_301)
-
+    to(location, 301)
 
 def found(location):
     """Redirects to the specified location using HTTP 302 status code"""
-    to(location, falcon.HTTP_302)
+    to(location, 302)
 
 
 def see_other(location):
     """Redirects to the specified location using HTTP 303 status code"""
-    to(location, falcon.HTTP_303)
+    to(location, 303)
 
 
 def temporary(location):
     """Redirects to the specified location using HTTP 304 status code"""
-    to(location, falcon.HTTP_307)
+    to(location, 307)
 
 
 def not_found(*args, **kwargs):
     """Redirects request handling to the not found render"""
-    raise falcon.HTTPNotFound()
+    raise aiohttp.web.HTTPNotFound()

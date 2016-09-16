@@ -24,7 +24,7 @@ from __future__ import absolute_import
 from functools import partial
 from types import FunctionType, MethodType
 
-from falcon import HTTP_METHODS
+from hug.settings import HTTP_METHODS
 
 import hug.api
 from hug.routing import CLIRouter as cli
@@ -65,7 +65,6 @@ class Object(http):
         return method_or_class
 
     def http_methods(self, urls=None, **route_data):
-
 
         """Creates routes from a class, where the class method names should line up to HTTP METHOD types"""
         def decorator(class_definition):

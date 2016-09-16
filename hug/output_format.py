@@ -33,9 +33,6 @@ from functools import wraps
 from io import BytesIO
 from operator import itemgetter
 
-import falcon
-from falcon import HTTP_NOT_FOUND
-
 from hug import introspect
 from hug.format import camelcase, content_type
 

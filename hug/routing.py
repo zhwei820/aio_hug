@@ -27,8 +27,7 @@ import re
 from collections import OrderedDict
 from functools import wraps
 
-import falcon
-from falcon import HTTP_METHODS
+from hug.settings import HTTP_METHODS
 
 import hug.api
 import hug.interface
@@ -254,7 +253,7 @@ class NotFoundRouter(HTTPRouter):
     """Provides a chainable router that can be used to route 404'd request to a Python function"""
     __slots__ = ()
 
-    def __init__(self, output=None, versions=None, status=falcon.HTTP_NOT_FOUND, **kwargs):
+    def __init__(self, output=None, versions=None, status=404, **kwargs):
         super().__init__(output=output, versions=versions, status=status, **kwargs)
 
     def __call__(self, api_function):

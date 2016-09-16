@@ -26,8 +26,8 @@ import re
 from cgi import parse_multipart
 from urllib.parse import parse_qs as urlencoded_converter
 
-from falcon.util.uri import parse_query_string
-
+from urllib.parse import urlparse, parse_qsl
+from aiohttp import MultiDict
 from hug.format import content_type, underscore
 
 
@@ -68,7 +68,8 @@ def json_underscore(body, charset='utf-8', **kwargs):
 async def urlencoded(body, charset='ascii', **kwargs):
     """Converts query strings into native Python objects"""
     stream = await body.read()
-    return parse_query_string(stream.decode(charset), False)
+    # return parse_query_string(stream.decode(charset), False)
+    return MultiDict(parse_qsl(urlparse(stream.decode(charset)).query))
 
 
 @content_type('multipart/form-data')  # get from post ()

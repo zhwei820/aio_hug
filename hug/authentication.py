@@ -24,7 +24,7 @@ from __future__ import absolute_import
 import base64
 import binascii
 
-from falcon import HTTPUnauthorized
+import aiohttp
 
 
 def authenticator(function, challenges=()):
@@ -39,14 +39,12 @@ def authenticator(function, challenges=()):
         def authenticate(request, response, **kwargs):
             result = function(request, response, verify_user, **kwargs)
             if result is None:
-                raise HTTPUnauthorized('Authentication Required',
-                                       'Please provide valid {0} credentials'.format(function.__doc__.splitlines()[0]),
-                                       challenges=challenges)
+                raise aiohttp.web.HTTPForbidden('Authentication Required',
+                                       'Please provide valid {0} credentials'.format(function.__doc__.splitlines()[0]))
 
             if result is False:
-                raise HTTPUnauthorized('Invalid Authentication',
-                                       'Provided {0} credentials were invalid'.format(function.__doc__.splitlines()[0]),
-                                       challenges=challenges)
+                raise aiohttp.web.HTTPForbidden('Invalid Authentication',
+                                       'Provided {0} credentials were invalid'.format(function.__doc__.splitlines()[0]))
 
             request.context['user'] = result
             return True
@@ -70,9 +68,8 @@ def basic(request, response, verify_user, realm='simple', **kwargs):
     try:
         auth_type, user_and_key = http_auth.split(' ', 1)
     except ValueError:
-        raise HTTPUnauthorized('Authentication Error',
-                               'Authentication header is improperly formed',
-                               challenges=('Basic realm="{}"'.format(realm), ))
+        raise aiohttp.web.HTTPForbidden('Authentication Error',
+                               'Authentication header is improperly formed')
 
     if auth_type.lower() == 'basic':
         try:
@@ -82,9 +79,8 @@ def basic(request, response, verify_user, realm='simple', **kwargs):
                 response.set_header('WWW-Authenticate', '')
                 return user
         except (binascii.Error, ValueError):
-            raise HTTPUnauthorized('Authentication Error',
-                                   'Unable to determine user and password with provided encoding',
-                                   challenges=('Basic realm="{}"'.format(realm), ))
+            raise aiohttp.web.HTTPForbidden('Authentication Error',
+                                   'Unable to determine user and password with provided encoding')
     return False
 
 
