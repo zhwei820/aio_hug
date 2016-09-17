@@ -25,6 +25,52 @@ from hug.database import init_db
 from settings import *
 
 
+@hug.http()
+async def hello_world():
+    return "Hello World!"
+
+class API(object):    
+    @hug.call('/hello_world1')
+    async def hello_world(self=None):
+        return "Hello World!"
+
+# class API1(object):  # todo 
+#     def __init__(self):
+#         hug.call('/hello_world_method')(self.hello_world_method)
+
+#     async def hello_world_method(self):
+#         return "Hello World!"
+
+@hug.get(output_invalid=hug.output_format.json, output=hug.output_format.file)
+async def echo3(text):
+    return text
+
+
+@hug.get()
+async def implementation_1():
+    return 1
+
+@hug.get()
+async def implementation_2():
+    return 2
+
+@hug.get()
+async def smart_route(implementation: int):
+    if implementation == 1:
+        return implementation_1
+    elif implementation == 2:
+        return implementation_2
+    else:
+        return "NOT IMPLEMENTED"
+
+
+
+
+
+
+
+
+
 @hug.post("/async_test", versions = '1')
 async def async_test(request, response, aa):
     return {"code": 0, "message": "test ok!"}

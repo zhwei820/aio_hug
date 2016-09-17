@@ -336,8 +336,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
                 router = None
                 for method, versions in methods.items():
                     if len(versions) == 1 and None in versions.keys():
-                        router = versions[ver]
-                        app.router.add_route(method, '/v%s' % (ver) + url, router, name=None)
+                        router = versions[None]
+                        app.router.add_route(method, url, router, name=None)
                     else:
 
                         for ver in versions.keys():

@@ -222,8 +222,8 @@ def file(data, response):
         name, data = data, open(data, 'rb')
     else:
         response.content_type = 'text/plain'
-        response.status = HTTP_NOT_FOUND
-        return 'File not found!'
+        response.set_status(404)
+        return b"File not found!"
 
     response.content_type = mimetypes.guess_type(name, None)[0] or 'application/octet-stream'
     return data

@@ -534,8 +534,8 @@ class HTTP(Interface):
         #     response.status = self.set_status
         response.content_type = self.content_type(request, response)
 
-    def render_errors(self, errors, request):
-        response = aiohttp.web.Response(status = 400)
+    def render_errors(self, errors, request, response):
+        response.set_status(400)
         data = {'errors': errors}
         if getattr(self, 'on_invalid', False):
             data = self.on_invalid(data, **self._arguments(self._params_for_on_invalid, request, response))
@@ -610,7 +610,7 @@ class HTTP(Interface):
             input_parameters = await self.gather_parameters(request, response, api_version, **kwargs)
             errors = self.validate(input_parameters)
             if errors:
-                return self.render_errors(errors, request)
+                return self.render_errors(errors, request, response)
 
             res_content = await self.call_function(**input_parameters)
             return self.render_content(res_content, request, response, **kwargs)

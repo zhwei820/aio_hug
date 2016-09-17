@@ -11,4 +11,4 @@ ch.setFormatter(f)
 log.addHandler(ch)
 
 
-HTTP_METHODS = ('call', 'cli', 'connect', 'delete', 'exception', 'get', 'get_post', 'head', 'http', 'local', 'not_found', 'object', 'options', 'patch', 'post', 'put', 'sink', 'static', 'trace')
+HTTP_METHODS = ('CONNECT', 'DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT', 'TRACE')

@@ -34,6 +34,7 @@ import hug.interface
 import hug.output_format
 from hug import introspect
 from hug.exceptions import InvalidTypeData
+from hug.settings import *
 
 
 class Router(object):
@@ -359,7 +360,6 @@ class URLRouter(HTTPRouter):
     def __call__(self, api_function):
         api = self.route.get('api', hug.api.from_object(api_function))
         api.http.routes.setdefault(api.http.base_url, OrderedDict())
-
         (interface, callable_method) = self._create_interface(api, api_function)
 
         use_examples = self.route.get('examples', ())
@@ -384,6 +384,7 @@ class URLRouter(HTTPRouter):
                         api.http.versioned.setdefault(version, {})[callable_method.__name__] = callable_method
                         
         interface.examples = use_examples
+
         return callable_method
 
     def urls(self, *urls, **overrides):

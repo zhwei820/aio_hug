@@ -3,7 +3,7 @@ import sys
 par_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
 sys.path.append(par_dir)
 
-import pytest
+import pytest, json
 import hug
 from aiohttp import web
 
@@ -27,17 +27,12 @@ def cli(loop, test_client):
     app = api.http.aio_server(loop)
     return loop.run_until_complete(test_client(app))
 
-async def test_set_value(cli):
+async def test_post(cli):
     resp = await cli.post('/v1/async_test', data={'aa': 'foo'})
     assert resp.status == 200
-    assert await resp.text() == '{"code": 0, "message": "test ok!"}'
+    assert json.loads(await resp.text()) == {"code": 0, "message": "test ok!"}
 
-
-# async def test_hello1(test_client, loop):
-#     app = web.Application(loop=loop)
-#     # app.router.add_route('get', '/', hello)
-#     client = await test_client(app)
-#     resp = await client.get('/')
-#     assert resp.status == 200
-#     text = await resp.text()
-#     assert 'Hello, world' in text
+async def test_get(cli):
+    resp = await cli.get('/v2/async_test?aa=1&bb=kkk')
+    assert resp.status == 200
+    assert await resp.text() == '"test"'

@@ -26,8 +26,8 @@ import socket
 from collections import namedtuple
 from io import BytesIO
 from queue import Queue
+import aiohttp
 
-import falcon
 import requests
 
 import hug._empty as empty
@@ -60,6 +60,11 @@ class Service(object):
 
     def post(self, url, url_params=empty.dict, headers=empty.dict, timeout=None, **params):
         """Calls the service at the specified URL using the "POST" method"""
+        print()
+        print()
+        print()
+        print()
+        print()
         return self.request('POST', url=url, headers=headers, timeout=timeout, **params)
 
     def delete(self, url, url_params=empty.dict, headers=empty.dict, timeout=None, **params):
@@ -138,7 +143,7 @@ class Local(Service):
             return Response('Not Found', 404, {'content-type', 'application/json'})
 
         interface = function.interface.http
-        response = falcon.Response()
+        response = aiohttp.web.Response()
         request = Request(None, None, empty.dict)
         interface.set_response_defaults(response)
 

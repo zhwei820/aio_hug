@@ -103,6 +103,7 @@ class API(object):
     def http(self, *kargs, **kwargs):
         """Starts the process of building a new HTTP route linked to this API instance"""
         kwargs['api'] = self.api
+        kwargs['accept'] = ('GET', 'POST')
         return http(*kargs, **kwargs)
 
     def urls(self, *kargs, **kwargs):
