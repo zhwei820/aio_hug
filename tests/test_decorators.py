@@ -44,12 +44,10 @@ __hug_wsgi__ = __hug_wsgi__  # noqa
 async def hello_world():
     return "Hello World!"
 
-
-class API(object):    
+class API(object):
     @hug.call('/hello_world1')
     async def hello_world(self=None):
         return "Hello World!"
-
 
 # class API1(object):  # todo
 #     def __init__(self):
@@ -65,7 +63,6 @@ async def echo(text):
 @hug.call(on_invalid=lambda data: 'error')
 async def echo1(text):
     return text
-
 
 def handle_error(data, request, response):
     return 'errored'
@@ -95,7 +92,17 @@ async def smart_route(implementation: int):
     else:
         return "NOT IMPLEMENTED"
 
+@hug.call('/custom_route')
+async def method_name():
+    return 'works'
 
+@hug.call()
+async def multiple_parameter_types(start, middle: hug.types.text, end: hug.types.number=5, **kwargs):
+    return 'success'
+
+@hug.get(raise_on_invalid=True)
+async def my_handler(argument_1: int):
+    return True
 
 
 
@@ -160,7 +167,7 @@ async def test_on_invalid_transformer(cli):
     # resp = await cli.get('/echo')
     # assert "required" in json.loads(await resp.text())['errors']['text'].lower()
 
-# async def test_on_invalid_format(cli):  # todo 
+# async def test_on_invalid_format(cli):  # todo
 #     """Test to ensure it's possible to change the format based on a validation error"""
 
 #     resp = await cli.get('/echo3?text=llll')
@@ -183,57 +190,65 @@ async def test_on_invalid_transformer(cli):
     # assert isinstance(hug.test.get(api, '/echo2').data, (list, tuple))
 
 
-
-async def test_on_invalid_format(cli):  # todo 
-    """Test to ensure you can easily redirect to another method without an actual redirect"""
-
-    resp = await cli.get('/smart_route?implementation=1')
-    assert await resp.text() == '1'
+#
+# async def test_smart_route(cli):  # todo
+#     """Test to ensure you can easily redirect to another method without an actual redirect"""
+#
+#     resp = await cli.get('/smart_route?implementation=1')
+#     assert await resp.text() == '1'
 
 
     # assert hug.test.get(api, 'smart_route', implementation=1).data == 1
     # assert hug.test.get(api, 'smart_route', implementation=2).data == 2
     # assert hug.test.get(api, 'smart_route', implementation=3).data == "NOT IMPLEMENTED"
 
+async def test_custom_url(cli):
+    """Test to ensure that it's possible to have a route that differs from the function name"""
 
-# def test_custom_url():
-#     """Test to ensure that it's possible to have a route that differs from the function name"""
-#     @hug.call('/custom_route')
-#     def method_name():
-#         return 'works'
+    resp = await cli.get('/custom_route')
+    assert await resp.text() == '"works"'
 
-#     assert hug.test.get(api, 'custom_route').data == 'works'
-
+    resp = await cli.post('/custom_route')
+    assert await resp.text() == '"works"'
 
 # # def test_api_auto_initiate(): # not checked yet
 # #     """Test to ensure that Hug automatically exposes a wsgi server method"""
 # #     assert isinstance(__hug_wsgi__(create_environ('/non_existant'), StartResponseMock()), (list, tuple))
 
+async def test_parameters(cli):
+    """Tests to ensure that Hug can easily handle multiple parameters with multiple types"""
 
-# def test_parameters():
-#     """Tests to ensure that Hug can easily handle multiple parameters with multiple types"""
-#     @hug.call()
-#     def multiple_parameter_types(start, middle: hug.types.text, end: hug.types.number=5, **kwargs):
-#         return 'success'
+    resp = await cli.get('/multiple_parameter_types?start=start&middle=middle&end=7')
+    assert await resp.text() == '"success"'
 
-#     assert hug.test.get(api, 'multiple_parameter_types', start='start', middle='middle', end=7).data == 'success'
-#     assert hug.test.get(api, 'multiple_parameter_types', start='start', middle='middle').data == 'success'
-#     assert hug.test.get(api, 'multiple_parameter_types', start='start', middle='middle', other="yo").data == 'success'
+    resp = await cli.get('/multiple_parameter_types?start=start&middle=middle')
+    assert await resp.text() == '"success"'
 
-#     nan_test = hug.test.get(api, 'multiple_parameter_types', start='start', middle='middle', end='NAN').data
-#     assert 'Invalid' in nan_test['errors']['end']
+    resp = await cli.get('/multiple_parameter_types?start=start&middle=middle&other=7')
+    assert await resp.text() == '"success"'
+
+    resp = await cli.get('/multiple_parameter_types?start=start&middle=middle&end=nan')
+    print(await resp.text())
+    assert "end" in json.loads(await resp.text())['errors'].keys()
+
+async def test_parameters(cli):
+    """Tests to ensure that Hug can easily handle multiple parameters with multiple types"""
+
+    resp = await cli.get('/multiple_parameter_types?start=start&middle=middle&end=7')
+    assert await resp.text() == '"success"'
+
+async def test_raise_on_invalid(cli):
+    """Test to ensure hug correctly respects a request to allow validations errors to pass through as exceptions"""
 
 
-# def test_raise_on_invalid():
-#     """Test to ensure hug correctly respects a request to allow validations errors to pass through as exceptions"""
-#     @hug.get(raise_on_invalid=True)
-#     def my_handler(argument_1: int):
-#         return True
 
-#     with pytest.raises(Exception):
-#         hug.test.get(api, 'my_handler', argument_1='hi')
+    with pytest.raises(Exception):
+        # hug.test.get(api, 'my_handler', argument_1='hi')
+        resp = await cli.get('/my_handler?argument_1=start')
+        assert await resp.text() == '"success"'
 
-#     assert hug.test.get(api, 'my_handler', argument_1=1)
+    resp = await cli.get('/my_handler?argument_1=1')
+    assert await resp.text() == 'true'
 
 
 # def test_range_request():
