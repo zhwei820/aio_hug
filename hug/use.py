@@ -60,11 +60,6 @@ class Service(object):
 
     def post(self, url, url_params=empty.dict, headers=empty.dict, timeout=None, **params):
         """Calls the service at the specified URL using the "POST" method"""
-        print()
-        print()
-        print()
-        print()
-        print()
         return self.request('POST', url=url, headers=headers, timeout=timeout, **params)
 
     def delete(self, url, url_params=empty.dict, headers=empty.dict, timeout=None, **params):

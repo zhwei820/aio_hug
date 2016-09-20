@@ -554,7 +554,7 @@ class HTTP(Interface):
         res = await self.interface(**parameters)
         return res
 
-    def render_content(self, content, request, response, **kwargs):
+    async def render_content(self, content, request, response, **kwargs):
         if hasattr(content, 'interface') and (content.interface is True or hasattr(content.interface, 'http')):
             if content.interface is True:
                 print('interface1')
@@ -584,10 +584,9 @@ class HTTP(Interface):
                 response.content_range = (start, end, size)
                 content.close()
             else:
-                print(content)
-                response.stream = content
+                response.body = content.read()
                 if size:
-                    response.stream_len = size
+                    response.content_length = size
         else:
             response.body = content
         return response
@@ -616,10 +615,9 @@ class HTTP(Interface):
                 return self.render_errors(errors, request, response)
 
             res_content = await self.call_function(**input_parameters)
-            return self.render_content(res_content, request, response, **kwargs)
+            return await self.render_content(res_content, request, response, **kwargs)
 
         except exception_types as exception:
-            print('exception_types')
             handler = None
             if type(exception) in exception_types:
                 handler = self.api.http.exception_handlers(api_version)[type(exception)]
