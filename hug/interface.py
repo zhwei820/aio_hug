@@ -570,8 +570,8 @@ class HTTP(Interface):
             size = None
             if hasattr(content, 'name') and os.path.isfile(content.name):
                 size = os.path.getsize(content.name)
-            if request.headers.get('range', '') and size:
-                start, end = request.headers['range'].split('=')[1].split('-')
+            if (request.headers.get('range', '') or request.headers.get('Range', '')) and size:
+                start, end = request.headers['range'].split('=')[1].split('-')  # todo
                 end = int(end)
                 start = int(start)
                 if end < 0:
@@ -579,7 +579,7 @@ class HTTP(Interface):
                 end = min(end, size)
                 length = end - start + 1
                 content.seek(start)
-                response.data = content.read(length)
+                response.body = content.read(length)
                 response.set_status(206)
                 response.content_range = (start, end, size)
                 content.close()
