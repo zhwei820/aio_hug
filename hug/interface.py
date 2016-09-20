@@ -458,10 +458,10 @@ class HTTP(Interface):
 
         if self.parse_body and request.content_length:
             # body = request.stream
-            body = request.content            
+            body = request.content
             content_type, content_params = parse_content_type(request.content_type)
             body_formatter = self.api.http.input_format(content_type) if body else ''
-            
+
             if body_formatter:
                 body = await body_formatter(body, **content_params)
             if 'body' in self.all_parameters:
@@ -570,18 +570,21 @@ class HTTP(Interface):
             size = None
             if hasattr(content, 'name') and os.path.isfile(content.name):
                 size = os.path.getsize(content.name)
-            if request.range and size:
-                start, end = request.range
+            if request.headers.get('range', '') and size:
+                start, end = request.headers['range'].split('=')[1].split('-')
+                end = int(end)
+                start = int(start)
                 if end < 0:
                     end = size + end
                 end = min(end, size)
                 length = end - start + 1
                 content.seek(start)
                 response.data = content.read(length)
-                response.status = 206
+                response.set_status(206)
                 response.content_range = (start, end, size)
                 content.close()
             else:
+                print(content)
                 response.stream = content
                 if size:
                     response.stream_len = size
@@ -614,7 +617,7 @@ class HTTP(Interface):
 
             res_content = await self.call_function(**input_parameters)
             return self.render_content(res_content, request, response, **kwargs)
-            
+
         except exception_types as exception:
             print('exception_types')
             handler = None

@@ -104,6 +104,9 @@ async def multiple_parameter_types(start, middle: hug.types.text, end: hug.types
 async def my_handler(argument_1: int):
     return True
 
+@hug.get(output=hug.output_format.png_image)
+async def image():
+    return 'artwork/logo.png'
 
 
 
@@ -239,9 +242,6 @@ async def test_parameters(cli):
 
 async def test_raise_on_invalid(cli):
     """Test to ensure hug correctly respects a request to allow validations errors to pass through as exceptions"""
-
-
-
     with pytest.raises(Exception):
         # hug.test.get(api, 'my_handler', argument_1='hi')
         resp = await cli.get('/my_handler?argument_1=start')
@@ -251,14 +251,14 @@ async def test_raise_on_invalid(cli):
     assert await resp.text() == 'true'
 
 
-# def test_range_request():
-#     """Test to ensure that requesting a range works as expected"""
-#     @hug.get(output=hug.output_format.png_image)
-#     def image():
-#         return 'artwork/logo.png'
+async def test_range_request(cli):
+    """Test to ensure that requesting a range works as expected"""
 
-#     assert hug.test.get(api, 'image', headers={'range': 'bytes=0-100'})
-#     assert hug.test.get(api, 'image', headers={'range': 'bytes=0--1'})
+    resp = await cli.get('/image')
+    assert await resp.text() == 'true'
+
+    # assert hug.test.get(api, 'image', headers={'range': 'bytes=0-100'})
+    # assert hug.test.get(api, 'image', headers={'range': 'bytes=0--1'})
 
 # def test_parameters_override():
 #     """Test to ensure the parameters override is handled as expected"""

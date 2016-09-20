@@ -29,12 +29,12 @@ from settings import *
 async def hello_world():
     return "Hello World!"
 
-class API(object):    
+class API(object):
     @hug.call('/hello_world1')
     async def hello_world(self=None):
         return "Hello World!"
 
-# class API1(object):  # todo 
+# class API1(object):  # todo
 #     def __init__(self):
 #         hug.call('/hello_world_method')(self.hello_world_method)
 
@@ -45,24 +45,28 @@ class API(object):
 async def echo3(text):
     return text
 
+#
+# @hug.get()
+# async def implementation_1():
+#     return 1
+#
+# @hug.get()
+# async def implementation_2():
+#     return 2
+#
+# @hug.get()
+# async def smart_route(implementation: int):
+#     if implementation == 1:
+#         return implementation_1
+#     elif implementation == 2:
+#         return implementation_2
+#     else:
+#         return "NOT IMPLEMENTED"
 
-@hug.get()
-async def implementation_1():
-    return 1
 
-@hug.get()
-async def implementation_2():
-    return 2
-
-@hug.get()
-async def smart_route(implementation: int):
-    if implementation == 1:
-        return implementation_1
-    elif implementation == 2:
-        return implementation_2
-    else:
-        return "NOT IMPLEMENTED"
-
+@hug.get(output=hug.output_format.png_image)
+async def image():
+    return 'artwork/logo.png'
 
 
 
@@ -81,28 +85,28 @@ async def async_test1(request, response, aa:hug.types.number, bb):
     ''' doc for this end point
     '''
     return 'test'
-    # return web.json_response({'hello': 'world'})   
+    # return web.json_response({'hello': 'world'})
 
 # if not DEBUG:
 #     @hug.not_found()
 #     async def not_found(request):
 #         return {'Nothing': 'to see'}
 
-
-app = __hug__.http.server()
-
-async def _init_db(app):
-    app.db = await init_db(
-        host=MYSQL_HOST,
-        db=MYSQL_DB_NAME,
-        user=MYSQL_USER,
-        password=MYSQL_PASSWORD,
-        loop=loop
-        )
-    return app
-
-loop = asyncio.get_event_loop()
-app = loop.run_until_complete(_init_db(app))
+#
+# app = __hug__.http.server()
+#
+# async def _init_db(app):
+#     app.db = await init_db(
+#         host=MYSQL_HOST,
+#         db=MYSQL_DB_NAME,
+#         user=MYSQL_USER,
+#         password=MYSQL_PASSWORD,
+#         loop=loop
+#         )
+#     return app
+#
+# loop = asyncio.get_event_loop()
+# app = loop.run_until_complete(_init_db(app))
 
 
 if __name__ == '__main__':
