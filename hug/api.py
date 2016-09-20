@@ -308,7 +308,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
                                 "Here's a definition of the API to help you get going :)")
             to_return['documentation'] = self.documentation(url_prefix, self.determine_version(request, False))
             response.body = json.dumps(to_return, indent=4, separators=(',', ': ')).encode('utf8')
-            # response.status = 404
+            response.set_status(404)
             response.content_type = 'application/json'
             return response
         return handle_404
@@ -351,7 +351,6 @@ class HTTPInterfaceAPI(InterfaceAPI):
                 not_found_handler = self.not_found_handlers[None]
 
         if not_found_handler:
-            not_found_handler
             app._not_found = not_found_handler
 
         return app
