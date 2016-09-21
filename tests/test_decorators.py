@@ -374,11 +374,10 @@ async def not_found_handler(response):
     response.set_status(404)  #  todo
     return "Not Found"
 
-
-@hug.not_found(versions=10)  # noqa
-async def not_found_handler(response):
-    response.status = 200
-    return {'look': 'elsewhere'}
+# @hug.not_found(versions=10)  # noqa  # todo
+# async def not_found_handler(response):
+#     response.status = 200
+#     return {'look': 'elsewhere'}
 
 async def test_not_found(cli):
     """Test to ensure the not_found decorator correctly routes 404s to the correct handler"""
@@ -391,65 +390,65 @@ async def test_not_found(cli):
     assert await resp.text() == '"Not Found"'
     assert resp.status == 404
 
-#     result = hug.test.get(api, '/v10/does_not_exist/yet')
-#     assert result.data == {'look': 'elsewhere'}
-#     assert result.status == falcon.HTTP_OK
+import tests.module_aa
+@hug.extend_api()
+def extend_with():
+    return (tests.module_aa, )
 
-#     result = hug.test.get(api, '/does_not_exist/yet')
-#     assert result.data == "Not Found"
-#     assert result.status == falcon.HTTP_NOT_FOUND
+async def test_not_found_with_extended_api(cli):
+    """Test to ensure the not_found decorator works correctly when the API is extended"""
+    resp = await cli.post('/v10/does_not_exist')
+    assert await resp.text() == '"Not Found"'
+    resp = await cli.get('/made_up_api')
+    assert await resp.text() == 'true'
 
+@hug.get('/echo11')
+async def echo11(text):
+    return "Not version"
 
-# def test_not_found_with_extended_api():
-#     """Test to ensure the not_found decorator works correctly when the API is extended"""
-#     @hug.extend_api()
-#     def extend_with():
-#         import tests.module_fake
-#         return (tests.module_fake, )
+@hug.get('/echo11', versions=1)  # noqa
+async def echo11(text):
+    return text
 
-#     assert hug.test.get(api, '/does_not_exist/yet').data is True
+@hug.get('/echo11', versions=range(2, 4))  # noqa
+async def echo11(text):
+    return "Echo: {text}".format(**locals())
 
-# def test_versioning():
-#     """Ensure that Hug correctly routes API functions based on version"""
-#     @hug.get('/echo')
-#     def echo(text):
-#         return "Not Implemented"
+@hug.get('/echo11', versions=7)  # noqa
+async def echo11(text, api_version):
+    return api_version
 
-#     @hug.get('/echo', versions=1)  # noqa
-#     def echo(text):
-#         return text
-
-#     @hug.get('/echo', versions=range(2, 4))  # noqa
-#     def echo(text):
-#         return "Echo: {text}".format(**locals())
-
-#     @hug.get('/echo', versions=7)  # noqa
-#     def echo(text, api_version):
-#         return api_version
-
-#     @hug.get('/echo', versions=False)  # noqa
-#     def echo(text):
-#         return "No Versions"
-
-#     assert hug.test.get(api, 'v1/echo', text="hi").data == 'hi'
-#     assert hug.test.get(api, 'v2/echo', text="hi").data == "Echo: hi"
-#     assert hug.test.get(api, 'v3/echo', text="hi").data == "Echo: hi"
-#     assert hug.test.get(api, 'echo', text="hi", api_version=3).data == "Echo: hi"
-#     assert hug.test.get(api, 'echo', text="hi", headers={'X-API-VERSION': '3'}).data == "Echo: hi"
-#     assert hug.test.get(api, 'v4/echo', text="hi").data == "Not Implemented"
-#     assert hug.test.get(api, 'v7/echo', text="hi").data == 7
-#     assert hug.test.get(api, 'echo', text="hi").data == "No Versions"
-#     assert hug.test.get(api, 'echo', text="hi", api_version=3, body={'api_vertion': 4}).data == "Echo: hi"
-
-#     with pytest.raises(ValueError):
-#         hug.test.get(api, 'v4/echo', text="hi", api_version=3)
+@hug.get('/echo11', versions=False)  # noqa
+async def echo11(text):
+    return "No Versions"
 
 
-# def test_multiple_version_injection():
+async def test_versioning(cli):
+    """Ensure that Hug correctly routes API functions based on version"""
+
+    resp = await cli.get('/v1/echo11?text=hi')
+    assert await resp.text() == '"hi"'
+
+    resp = await cli.get('/v2/echo11?text=hi')
+    assert await resp.text() == '"Echo: hi"'
+
+    resp = await cli.get('/v3/echo11?text=hi')
+    assert await resp.text() == '"Echo: hi"'
+
+    resp = await cli.get('/v4/echo11?text=hi')
+    assert await resp.text() == '"Not Found"'
+
+    resp = await cli.get('/echo11?text=hi')
+    assert await resp.text() == '"Not version"'
+
+# @hug.get(versions=(1, 2, None))
+# async def my_api_function(hug_api_version):
+#     return hug_api_version
+#
+# async def test_multiple_version_injection(cli):
 #     """Test to ensure that the version injected sticks when calling other functions within an API"""
-#     @hug.get(versions=(1, 2, None))
-#     def my_api_function(hug_api_version):
-#         return hug_api_version
+#     resp = await cli.get('/v1/my_api_function')
+#     assert await resp.text() == '"1"'
 
 #     assert hug.test.get(api, 'v1/my_api_function').data == 1
 #     assert hug.test.get(api, 'v2/my_api_function').data == 2
@@ -471,23 +470,29 @@ async def test_not_found(cli):
 #     assert hug.test.get(api, 'v1/one_more_level_of_indirection').data == 1
 #     assert one_more_level_of_indirection() == 1
 
+@hug.get('/test_json')
+async def test_json(text):
+    return text
 
-# def test_json_auto_convert():
-#     """Test to ensure all types of data correctly auto convert into json"""
-#     @hug.get('/test_json')
-#     def test_json(text):
-#         return text
-#     assert hug.test.get(api, 'test_json', body={'text': 'value'}).data == "value"
+@hug.get('/test_json_body')
+async def test_json_body(body):
+    return body
 
-#     @hug.get('/test_json_body')
-#     def test_json_body(body):
-#         return body
-#     assert hug.test.get(api, 'test_json_body', body=['value1', 'value2']).data == ['value1', 'value2']
+@hug.get(parse_body=False)
+async def test_json_body_stream_only(body=None):
+    return body
 
-#     @hug.get(parse_body=False)
-#     def test_json_body_stream_only(body=None):
-#         return body
-#     assert hug.test.get(api, 'test_json_body_stream_only', body=['value1', 'value2']).data is None
+async def test_json_auto_convert(cli):
+    """Test to ensure all types of data correctly auto convert into json"""
+    resp = await cli.get('/test_json?text=hi')
+    assert await resp.text() == '"hi"'
+
+    resp = await cli.get('/test_json_body?body=11')
+    print(dir(resp))
+    assert await resp.read() == '"hi"'
+
+    resp = await cli.get('/test_json_body_stream_only?body=hi')
+    assert await resp.text() == '"hi"'
 
 
 # def test_error_handling():

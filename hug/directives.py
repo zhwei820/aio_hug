@@ -26,6 +26,7 @@ from __future__ import absolute_import
 
 from functools import partial
 from timeit import default_timer as python_timer
+from hug.settings import *
 
 from hug import introspect
 
@@ -111,6 +112,7 @@ class CurrentAPI(object):
             raise AttributeError('API Function {0} not found'.format(name))
 
         accepts = function.interface.arguments
+        log.info(self.api_version)
         if 'hug_api_version' in accepts:
             function = partial(function, hug_api_version=self.api_version)
         if 'hug_current_api' in accepts:
