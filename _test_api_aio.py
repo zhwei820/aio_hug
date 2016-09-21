@@ -104,10 +104,15 @@ async def async_test1(request, response, aa:hug.types.number, bb):
 # loop = asyncio.get_event_loop()
 # app = loop.run_until_complete(_init_db(app))
 
-@hug.get('/test_json_body')
+@hug.post('/test_json_body', examples='"')
 async def a_test_json_body(body):
     print(body)
     return body
+
+import tests.module_aa
+@hug.extend_api('/aaa')
+def extend_with():
+    return (tests.module_aa, )
 
 
 if __name__ == '__main__':
