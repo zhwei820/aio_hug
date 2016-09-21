@@ -24,6 +24,7 @@ import os
 import sys
 from unittest import mock
 
+import aiohttp
 import pytest
 import requests
 from hug.settings import *
@@ -488,7 +489,7 @@ async def test_json_auto_convert(cli):
     resp = await cli.get('/test_json?text=hi')
     assert await resp.text() == '"hi"'
 
-    # resp = await cli.get('/test_json_body')  # test 
+    # resp = await cli.get('/test_json_body')  # test
     # print(dir(resp))
     # assert await resp.read() == '"hi"'
 
@@ -496,29 +497,30 @@ async def test_json_auto_convert(cli):
     # assert await resp.text() == '"hi"'
 
 
-# def test_error_handling():
-#     """Test to ensure Hug correctly handles Falcon errors that are thrown during processing"""
-#     @hug.get()
-#     def test_error():
-#         raise falcon.HTTPInternalServerError('Failed', 'For Science!')
+@hug.get("/test_error")
+async def a_test_error():
+    return aiohttp.web.HTTPInternalServerError()
+    # raise aiohttp.web.HTTPFound('/redirect')
+    # return aiohttp.web.HTTPFound('/redirect')
 
-#     response = hug.test.get(api, 'test_error')
-#     assert 'errors' in response.data
-#     assert response.data['errors']['Failed'] == 'For Science!'
+async def test_error_handling(cli):
+    """Test to ensure Hug correctly handles Falcon errors that are thrown during processing"""
+    resp = await cli.get('/test_error')
+    assert resp.status == 500
 
 
-# def test_error_handling_builtin_exception():
-#     """Test to ensure built in exception types errors are handled as expected"""
-#     def raise_error(value):
-#         raise KeyError('Invalid value')
+def raise_error(value):
+    raise KeyError('Invalid value')
 
-#     @hug.get()
-#     def test_error(data: raise_error):
-#         return True
+@hug.get('/test_error1')
+async def b_test_error(data: raise_error):
+    return True
 
-#     response = hug.test.get(api, 'test_error', data=1)
-#     assert 'errors' in response.data
-#     assert response.data['errors']['data'] == 'Invalid value'
+async def test_error_handling_builtin_exception(cli):
+    """Test to ensure built in exception types errors are handled as expected"""
+    resp = await cli.get('/test_error1?data=1')
+    assert resp.status == 400
+    assert json.loads(await resp.text())['errors']['data'] == 'Invalid value'
 
 
 # def test_error_handling_custom():
@@ -637,83 +639,94 @@ async def test_json_auto_convert(cli):
 #     assert hug.test.get(api, 'test_marshmallow_input_field', item='bacon').data == 'bacon'
 
 
-# def test_stream_return():
-#     """Test to ensure that its valid for a hug API endpoint to return a stream"""
-#     @hug.get(output=hug.output_format.text)
-#     def test():
-#         return open(os.path.join(BASE_DIRECTORY, 'README.md'), 'rb')
+@hug.get(output=hug.output_format.text)
+async def stream_test():
+    return open(os.path.join(BASE_DIRECTORY, 'README.md'), 'rb')
 
-#     assert 'hug' in hug.test.get(api, 'test').data
-
-
-# def test_smart_outputter():
-#     """Test to ensure that the output formatter can accept request and response arguments"""
-#     def smart_output_type(response, request):
-#         if response and request:
-#             return 'application/json'
-
-#     @hug.format.content_type(smart_output_type)
-#     def output_formatter(data, request, response):
-#         return hug.output_format.json((data, request and True, response and True))
-
-#     @hug.get(output=output_formatter)
-#     def test():
-#         return True
-
-#     assert hug.test.get(api, 'test').data == [True, True, True]
+async def test_stream_return(cli):
+    """Test to ensure that its valid for a hug API endpoint to return a stream"""
+    resp = await cli.get('/stream_test')
+    print(await resp.text())
+    assert 'hug' in await resp.text()
 
 
+def smart_output_type(response, request):
+    if response and request:
+        return 'application/json'
+
+@hug.format.content_type(smart_output_type)
+def output_formatter(data, request, response):
+    return hug.output_format.json((data, request and True, response and True))
+
+@hug.get(output=output_formatter)
+async def output_test():
+    return True
+
+
+async def test_smart_outputter(cli):
+    """Test to ensure that the output formatter can accept request and response arguments"""
+    resp = await cli.get('/output_test')
+    assert 'true' in await resp.text()
+
+#
+# @hug.default_output_format()
+# def augmented(data):
+#     return hug.output_format.json(['Augmented', data])
+
+@hug.get(suffixes=('.js', '/js'), prefixes='/text')
+async def hello101():
+    return "world"
+
+@pytest.mark.skipif(sys.platform == 'win32', reason='Currently failing on Windows build')
+async def test_output_format(cli):
+    """Test to ensure it's possible to quickly change the default hug output format"""
+    old_formatter = api.http.output_format
+
+    resp = await cli.get('/hello101')
+    assert await resp.text() == '"world"'
+
+    resp = await cli.get('/hello101.js')
+    assert await resp.text() == '"world"'
+
+    resp = await cli.get('/hello101/js')
+    assert await resp.text() == '"world"'
+
+    resp = await cli.get('/text/hello101')
+    assert await resp.text() == '"world"'
+
+
+    # @hug.default_output_format()
+    # def jsonify(data):
+    #     return hug.output_format.json(data)
+    #
+    # api.http.output_format = hug.output_format.text
+    #
+    # @hug.get()
+    # def my_method():
+    #     return {'Should': 'work'}
+    #
+    # assert hug.test.get(api, 'my_method').data == "{'Should': 'work'}"
+    # api.http.output_format = old_formatter
+
+#
 # @pytest.mark.skipif(sys.platform == 'win32', reason='Currently failing on Windows build')
-# def test_output_format():
-#     """Test to ensure it's possible to quickly change the default hug output format"""
-#     old_formatter = api.http.output_format
-
-#     @hug.default_output_format()
-#     def augmented(data):
-#         return hug.output_format.json(['Augmented', data])
-
-#     @hug.get(suffixes=('.js', '/js'), prefixes='/text')
-#     def hello():
-#         return "world"
-
-#     assert hug.test.get(api, 'hello').data == ['Augmented', 'world']
-#     assert hug.test.get(api, 'hello.js').data == ['Augmented', 'world']
-#     assert hug.test.get(api, 'hello/js').data == ['Augmented', 'world']
-#     assert hug.test.get(api, 'text/hello').data == ['Augmented', 'world']
-
-#     @hug.default_output_format()
-#     def jsonify(data):
-#         return hug.output_format.json(data)
-
-
-#     api.http.output_format = hug.output_format.text
-
-#     @hug.get()
-#     def my_method():
-#         return {'Should': 'work'}
-
-#     assert hug.test.get(api, 'my_method').data == "{'Should': 'work'}"
-#     api.http.output_format = old_formatter
-
-
-# @pytest.mark.skipif(sys.platform == 'win32', reason='Currently failing on Windows build')
-# def test_input_format():
+# async def test_input_format(cli):
 #     """Test to ensure it's possible to quickly change the default hug output format"""
 #     old_format = api.http.input_format('application/json')
 #     api.http.set_input_format('application/json', lambda a: {'no': 'relation'})
-
+#
 #     @hug.get()
 #     def hello(body):
 #         return body
-
+#
 #     assert hug.test.get(api, 'hello', body={'should': 'work'}).data == {'no': 'relation'}
-
+#
 #     @hug.get()
 #     def hello2(body):
 #         return body
-
+#
 #     assert not hug.test.get(api, 'hello2').data
-
+#
 #     api.http.set_input_format('application/json', old_format)
 
 
@@ -729,24 +742,31 @@ async def test_json_auto_convert(cli):
 #     assert hug.test.get(api, 'demo', body={}, headers={'content-type': 'application/json; charset=UTF-8'}).data == {}
 
 
-# @pytest.mark.skipif(sys.platform == 'win32', reason='Currently failing on Windows build')
-# def test_middleware():
-#     """Test to ensure the basic concept of a middleware works as expected"""
-#     @hug.request_middleware()
-#     def proccess_data(request, response):
-#         request.env['SERVER_NAME'] = 'Bacon'
+@hug.request_middleware()
+def proccess_data(request, response):
+    print(dir(request))
+    request.SERVER_NAME = 'Bacon'
 
-#     @hug.response_middleware()
-#     def proccess_data2(request, response, resource):
-#         response.set_header('Bacon', 'Yumm')
+@hug.response_middleware()
+def proccess_data2(request, response, resource):
+    response.set_header('Bacon', 'Yumm')
 
-#     @hug.get()
-#     def hello(request):
-#         return request.env['SERVER_NAME']
+@hug.get()
+async def hello545(request):
+    print(dir(request))
 
-#     result = hug.test.get(api, 'hello')
-#     assert result.data == 'Bacon'
-#     assert result.headers_dict['Bacon'] == 'Yumm'
+    return request.SERVER_NAME
+
+@pytest.mark.skipif(sys.platform == 'win32', reason='Currently failing on Windows build')
+async def test_middleware(cli):
+    """Test to ensure the basic concept of a middleware works as expected"""
+    resp = await cli.get('/hello545')
+    assert await resp.text() == '"Bacon"'
+    print(dir(resp))
+
+    result = hug.test.get(api, 'hello')
+    assert result.data == 'Bacon'
+    assert result.headers_dict['Bacon'] == 'Yumm'
 
 
 # def test_requires():
