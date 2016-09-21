@@ -104,12 +104,12 @@ async def async_test1(request, response, aa:hug.types.number, bb):
 # loop = asyncio.get_event_loop()
 # app = loop.run_until_complete(_init_db(app))
 
-@hug.get(versions=(1, 2, None), examples='"')
-async def my_api_function(hug_api_version):
-    return hug_api_version
+@hug.get('/test_json_body')
+async def a_test_json_body(body):
+    print(body)
+    return body
 
 
 if __name__ == '__main__':
     api = __hug__.http
-    # api.base_url = 'http://127.0.0.1:8701'
     api.serve()

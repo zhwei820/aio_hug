@@ -299,9 +299,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
             response = aiohttp.web.Response()
             url_prefix = self.base_url
             if not url_prefix:
-                url_prefix = request.raw_path[:-1]
-                if request.path and request.path != "/":
-                    url_prefix = 'http://%s' % (request.host)
+                url_prefix = 'http://%s' % (request.host)
 
             to_return = OrderedDict()
             to_return['404'] = ("The API call you tried to make was not defined. "
