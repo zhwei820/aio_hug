@@ -301,7 +301,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
             if not url_prefix:
                 url_prefix = request.raw_path[:-1]
                 if request.path and request.path != "/":
-                    url_prefix = request.raw_path.split(request.path)[0]
+                    url_prefix = 'http://%s' % (request.host)
 
             to_return = OrderedDict()
             to_return['404'] = ("The API call you tried to make was not defined. "
@@ -333,16 +333,28 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
         for router_base_url, routes in self.routes.items():
             for url, methods in routes.items():
-                router = None
                 for method, versions in methods.items():
+                    routers = {}
+                    method_function = "on_{0}".format(method.lower())
+                    routers[method_function] = {}
                     if len(versions) == 1 and None in versions.keys():
-                        router = versions[None]
-                        app.router.add_route(method, url, router, name=None)
+                        routers[method_function][None] = versions[None]
                     else:
-
                         for ver in versions.keys():
-                            router = versions[ver]
-                            app.router.add_route(method, '/v%s' % (ver) + url, router, name=None)
+                            routers[method_function][ver] = versions[ver]
+
+                    for method_function in routers.keys():
+                        if routers[method_function].get(None):
+                            app.router.add_route(method, router_base_url + url, routers[method_function][None], name=None)
+
+                        if self.versions and self.versions != (None, ):
+                            for ver in self.versions:
+                                if ver == None:
+                                    continue
+                                if routers[method_function].get(ver):
+                                    app.router.add_route(method, router_base_url + '/v%s' % (ver) + url, routers[method_function][ver])
+                                else:
+                                    app.router.add_route(method, router_base_url + '/v%s' % (ver) + url, routers[method_function][list(routers[method_function].keys())[0]])
 
         default_not_found = self.documentation_404() if default_not_found is True else None
         not_found_handler = default_not_found
@@ -352,7 +364,6 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
         if not_found_handler:
             app._not_found = not_found_handler
-
         return app
 
 

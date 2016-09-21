@@ -30,7 +30,7 @@ async def hello_world():
     return "Hello World!"
 
 class API(object):
-    @hug.call('/hello_world1')
+    @hug.get('/hello_world1')
     async def hello_world(self=None):
         return "Hello World!"
 
@@ -40,10 +40,10 @@ class API(object):
 
 #     async def hello_world_method(self):
 #         return "Hello World!"
-
-@hug.get(output_invalid=hug.output_format.json, output=hug.output_format.file)
-async def echo3(text):
-    return text
+#
+# @hug.get(output_invalid=hug.output_format.json, output=hug.output_format.file)
+# async def echo3(text):
+#     return text
 
 #
 # @hug.get()
@@ -71,11 +71,7 @@ async def image():
 
 
 
-
-
-
-
-@hug.post("/async_test", versions = '1')
+@hug.post("/async_test", versions = '1', examples="/async_test?aa=1")
 async def async_test(request, response, aa):
     return {"code": 0, "message": "test ok!"}
 
@@ -110,4 +106,6 @@ async def async_test1(request, response, aa:hug.types.number, bb):
 
 
 if __name__ == '__main__':
-    __hug__.http.serve()
+    api = __hug__.http
+    # api.base_url = 'http://127.0.0.1:8701'
+    api.serve()
