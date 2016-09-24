@@ -116,7 +116,6 @@ def extend_with():
 
 @hug.request_middleware()
 async def proccess_data(request):
-    print('Bacon')
     request.SERVER_NAME = 'Bacon'
 
 
@@ -129,6 +128,17 @@ def user_is_not_tim(request, response, **kwargs):
 async def hello_q(request):
     return 'Hi!'
 
+
+from tests.module_fake_simple import FakeSimpleException
+
+@hug.exception(FakeSimpleException)
+async def handle_exception(exception):
+    return 'it works!'
+
+@hug.extend_api('/fake_simple')
+def extend_with1():
+    import tests.module_fake_simple
+    return (tests.module_fake_simple, )
 
 if __name__ == '__main__':
     api = __hug__.http

@@ -401,7 +401,7 @@ async def test_not_found_with_extended_api(cli):
     resp = await cli.post('/v10/does_not_exist')
     assert await resp.text() == '"Not Found"'
     resp = await cli.get('/made_up_api')
-    assert await resp.text() == 'true'
+    assert await resp.text() == '"made_up"'
 
 @hug.get('/echo11')
 async def echo11(text):
@@ -786,45 +786,41 @@ async def test_requires(cli):
     resp = await cli.get('/hello_q', headers={'USER': 'Tim'})
     assert await resp.text() == '"Unauthorized"'
 
-#     assert hug.test.get(api, 'hello').data == 'Hi!'
-#     assert hug.test.get(api, 'hello', headers={'USER': 'Tim'}).data == 'Unauthorized'
+
+import tests.module_aa
+@hug.extend_api('/aaa')
+def extend_with():
+    return (tests.module_aa, )
+
+@hug.extend_api()
+def extend_with():
+    return (tests.module_aa, )
 
 
-# def test_extending_api():
-#     """Test to ensure it's possible to extend the current API from an external file"""
-#     @hug.extend_api('/fake')
-#     def extend_with():
-#         import tests.module_fake
-#         return (tests.module_fake, )
+async def test_extending_api(cli):
+    """Test to ensure it's possible to extend the current API from an external file"""
+    resp = await cli.get('/made_up_api')
+    assert await resp.text() == '"made_up"'
 
-#     assert hug.test.get(api, 'fake/made_up_api').data
+    resp = await cli.get('/aaa/made_up_api')
+    assert await resp.text() == '"made_up"'
 
+from tests.module_fake_simple import FakeSimpleException
 
-# def test_extending_api_simple():
-#     """Test to ensure it's possible to extend the current API from an external file with just one API endpoint"""
-#     @hug.extend_api('/fake_simple')
-#     def extend_with():
-#         import tests.module_fake_simple
-#         return (tests.module_fake_simple, )
+@hug.exception(FakeSimpleException)
+async def handle_exception(exception):
+    print("dfd")
+    return 'it works!'
 
-#     assert hug.test.get(api, 'fake_simple/made_up_hello').data == 'hello'
+@hug.extend_api('/fake_simple')
+def extend_with():
+    import tests.module_fake_simple
+    return (tests.module_fake_simple, )
 
-
-# def test_extending_api_with_exception_handler():
-#     """Test to ensure it's possible to extend the current API from an external file"""
-
-#     from tests.module_fake_simple import FakeSimpleException
-
-#     @hug.exception(FakeSimpleException)
-#     def handle_exception(exception):
-#         return 'it works!'
-
-#     @hug.extend_api('/fake_simple')
-#     def extend_with():
-#         import tests.module_fake_simple
-#         return (tests.module_fake_simple, )
-
-#     assert hug.test.get(api, '/fake_simple/exception').data == 'it works!'
+async def test_extending_api_with_exception_handler(cli):
+    """Test to ensure it's possible to extend the current API from an external file"""
+    resp = await cli.get('/fake_simple/exception')
+    assert await resp.text() == '"it works!"'
 
 
 # def test_extending_api_with_base_url():

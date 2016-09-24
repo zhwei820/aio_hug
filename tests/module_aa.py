@@ -2,6 +2,6 @@
 import hug
 
 @hug.get()
-async def made_up_api(hug_my_directive=True):
+async def made_up_api():
     """for testing"""
-    return hug_my_directive
+    return 'made_up'

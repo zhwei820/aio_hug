@@ -614,7 +614,6 @@ class HTTP(Interface):
 
             res_content = await self.call_function(**input_parameters)
             return await self.render_content(res_content, request, response, **kwargs)
-
         except exception_types as exception:
             handler = None
             if type(exception) in exception_types:
@@ -624,7 +623,7 @@ class HTTP(Interface):
                   tuple(self.api.http.exception_handlers(api_version).items())[::-1]:
                     if isinstance(exception, exception_type):
                         handler = exception_handler
-            return handler(request=request, response=response, exception=exception, **kwargs)
+            return await handler(request=request, exception=exception, **kwargs)
 
     def documentation(self, add_to=None, version=None, base_url="", url=""):
         """Returns the documentation specific to an HTTP interface"""

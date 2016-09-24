@@ -382,7 +382,7 @@ class URLRouter(HTTPRouter):
                     for version in self.route['versions']:
                         version_mapping[version] = interface
                         api.http.versioned.setdefault(version, {})[callable_method.__name__] = callable_method
-                        
+
         interface.examples = use_examples
 
         return callable_method

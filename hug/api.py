@@ -139,7 +139,6 @@ class HTTPInterfaceAPI(InterfaceAPI):
         versions = (versions, ) if not isinstance(versions, (tuple, list)) else versions
         if not hasattr(self, '_exception_handlers'):
             self._exception_handlers = {}
-
         for version in versions:
             self._exception_handlers.setdefault(version, OrderedDict())[exception_type] = error_handler
 
