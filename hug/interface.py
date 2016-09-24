@@ -557,10 +557,8 @@ class HTTP(Interface):
     async def render_content(self, content, request, response, **kwargs):
         if hasattr(content, 'interface') and (content.interface is True or hasattr(content.interface, 'http')):
             if content.interface is True:
-                print('interface1')
                 content(request, response, api_version=None, **kwargs)
             else:
-                print('interface2')
                 content.interface.http(request, response, api_version=None, **kwargs)
             return
 
@@ -607,7 +605,7 @@ class HTTP(Interface):
             if lacks_requirement:
                 response.body = self.outputs(lacks_requirement,
                                              **self._arguments(self._params_for_outputs, request, response))
-                return
+                return response
 
             input_parameters = await self.gather_parameters(request, response, api_version, **kwargs)
             errors = self.validate(input_parameters)

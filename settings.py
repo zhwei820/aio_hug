@@ -21,5 +21,3 @@ STATUS = {
 	'INFO': 3,
 	'UPDATE_USERS': 4
 }
-
-print(MYSQL_PASSWORD)
