@@ -114,6 +114,10 @@ import tests.module_aa
 def extend_with():
     return (tests.module_aa, )
 
+@hug.request_middleware()
+async def proccess_data(request):
+    print('Bacon')
+    request.SERVER_NAME = 'Bacon'
 
 if __name__ == '__main__':
     api = __hug__.http

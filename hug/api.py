@@ -88,6 +88,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
         self.sinks = OrderedDict()
         self.versioned = OrderedDict()
         self.base_url = base_url
+        self._middleware = [not_found_middleware]
 
     @property
     def output_format(self):
@@ -321,13 +322,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
                                                                               **kwargs)
 
     def aio_server(self, loop, default_not_found=True):
-        app = web.Application(loop=loop, middlewares=[
-            # session_middleware(EncryptedCookieStorage(SECRET_KEY)),
-            # authorize,
-            # db_handler,
-            # aiohttp_debugtoolbar.middleware,
-            not_found_middleware,
-        ])
+        app = web.Application(loop=loop, middlewares=self._middleware)
 
         for router_base_url, routes in self.routes.items():
             for url, methods in routes.items():

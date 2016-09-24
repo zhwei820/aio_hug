@@ -89,13 +89,14 @@ def request_middleware(api=None):
     def decorator(middleware_method):
         apply_to_api = hug.API(api) if api else hug.api.from_object(middleware_method)
 
-        class MiddlewareRouter(object):
-            __slots__ = ()
+        async def middle_handler(app, handler):
+            async def middleware(request):
+                await middleware_method(request)
+                response = await handler(request)
+                return response
+            return middleware
 
-            def process_request(self, request, response):
-                return middleware_method(request, response)
-
-        apply_to_api.http.add_middleware(MiddlewareRouter())
+        apply_to_api.http.add_middleware(middle_handler)
         return middleware_method
     return decorator
 
