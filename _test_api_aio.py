@@ -109,10 +109,10 @@ async def a_test_json_body(body):
     print(body)
     return body
 
-import tests.module_aa
+import tests.module_fake
 @hug.extend_api('/aaa')
 def extend_with():
-    return (tests.module_aa, )
+    return (tests.module_fake, )
 
 @hug.request_middleware()
 async def proccess_data(request):
@@ -139,6 +139,14 @@ async def handle_exception(exception):
 def extend_with1():
     import tests.module_fake_simple
     return (tests.module_fake_simple, )
+
+@hug.post()
+async def test_url_encoded_post(**kwargs):
+    return kwargs
+
+@hug.post()
+async def test_multipart_post(**kwargs):
+    return kwargs
 
 if __name__ == '__main__':
     api = __hug__.http

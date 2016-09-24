@@ -263,7 +263,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
     @staticmethod
     def base_404(request, response, *kargs, **kwargs):
         """Defines the base 404 handler"""
-        response.status = 404
+        response.set_status(404)
 
     def determine_version(self, request, api_version=None):
         """Determines the appropriate version given the set api_version, the request header, and URL query params"""
