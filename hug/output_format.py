@@ -240,7 +240,7 @@ def on_content_type(handlers, default=None, error='The requested content type do
     def output_type(data, request, response):
         handler = handlers.get(request.content_type.split(';')[0], default)
         if not handler:
-            raise falcon.HTTPNotAcceptable(error)
+            raise 405
 
         response.content_type = handler.content_type
         return handler(data)
@@ -284,7 +284,7 @@ def accept(handlers, default=None, error='The requested content type does not ma
                     break
 
         if not handler:
-            raise falcon.HTTPNotAcceptable(error)
+            raise 405
 
         response.content_type = handler.content_type
         return handler(data)
@@ -311,7 +311,7 @@ def suffix(handlers, default=None, error='The requested suffix does not match an
                 break
 
         if not handler:
-            raise falcon.HTTPNotAcceptable(error)
+            raise 405
 
         response.content_type = handler.content_type
         return handler(data)
@@ -338,7 +338,7 @@ def prefix(handlers, default=None, error='The requested prefix does not match an
                 break
 
         if not handler:
-            raise falcon.HTTPNotAcceptable(error)
+            raise 405
 
         response.content_type = handler.content_type
         return handler(data)
