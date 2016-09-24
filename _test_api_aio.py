@@ -106,7 +106,6 @@ async def async_test1(request, response, aa:hug.types.number, bb):
 
 @hug.post('/test_json_body', examples='"')
 async def a_test_json_body(body):
-    print(body)
     return body
 
 import tests.module_fake
@@ -147,6 +146,34 @@ async def test_url_encoded_post(**kwargs):
 @hug.post()
 async def test_multipart_post(**kwargs):
     return kwargs
+
+@hug.post()
+async def test_naive(argument_1):
+    return argument_1
+
+@hug.delete()
+async def test_route(response):
+    response.set_status(204)
+    return
+
+def contains_either(fields):
+    if not 'one' in fields and not 'two' in fields:
+        return {'one': 'must be defined', 'two': 'must be defined'}
+
+@hug.get(validate=contains_either)
+async def my_endpoint1(one=None, two=None):
+    return True
+
+class Error(Exception):
+    def __str__(self):
+        return 'Error'
+
+def raise_error(value):
+    raise Error()
+
+@hug.get()
+async def test_error(data: raise_error):
+    return True
 
 if __name__ == '__main__':
     api = __hug__.http
