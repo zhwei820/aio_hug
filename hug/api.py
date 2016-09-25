@@ -233,7 +233,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
         documentation['handlers'] = version_dict
         return documentation
 
-    def serve(self, no_documentation=False):
+    def serve(self, port = 8071, no_documentation=False):
         """Runs the basic hug development server against this API"""
         loop = asyncio.get_event_loop()
         if no_documentation:
@@ -243,11 +243,11 @@ class HTTPInterfaceAPI(InterfaceAPI):
         # aiohttp_debugtoolbar.setup(app, intercept_redirects=False)
 
         handler = app.make_handler()
-        serv_generator = loop.create_server(handler, '127.0.0.1', 8701)
+        serv_generator = loop.create_server(handler, '127.0.0.1', port)
 
         serv = loop.run_until_complete(serv_generator)
         print(INTRO)
-        print("Serving on port {0}...".format(8701))
+        print("Serving on port {0}...".format(port))
 
         log.debug('start server %s' % str(serv.sockets[0].getsockname()))
         try:
