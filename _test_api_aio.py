@@ -21,55 +21,25 @@ OTHER DEALINGS IN THE SOFTWARE.
 """
 import hug, asyncio
 from aiohttp import web, MsgType
-from hug.database import init_db
 from settings import *
 
+async def hello():
+    await asyncio.sleep(10)
+    return "haha"
 
-@hug.get()
+@hug.get("/hello")
 async def hello_world():
-    return "Hello World!"
+    res = await hello()
+    return res
 
 class API(object):
     @hug.get('/hello_world1')
     async def hello_world(self=None):
         return "Hello World!"
 
-# class API1(object):  # todo
-#     def __init__(self):
-#         hug.call('/hello_world_method')(self.hello_world_method)
-
-#     async def hello_world_method(self):
-#         return "Hello World!"
-#
-# @hug.get(output_invalid=hug.output_format.json, output=hug.output_format.file)
-# async def echo3(text):
-#     return text
-
-#
-# @hug.get()
-# async def implementation_1():
-#     return 1
-#
-# @hug.get()
-# async def implementation_2():
-#     return 2
-#
-# @hug.get()
-# async def smart_route(implementation: int):
-#     if implementation == 1:
-#         return implementation_1
-#     elif implementation == 2:
-#         return implementation_2
-#     else:
-#         return "NOT IMPLEMENTED"
-
-
 @hug.get(output=hug.output_format.png_image)
 async def image():
     return 'artwork/logo.png'
-
-
-
 
 @hug.post("/async_test", versions = '1', examples="/async_test?aa=1")
 async def async_test(request, response, aa):
@@ -81,28 +51,6 @@ async def async_test1(request, response, aa:hug.types.number, bb):
     ''' doc for this end point
     '''
     return 'test'
-    # return web.json_response({'hello': 'world'})
-
-# if not DEBUG:
-#     @hug.not_found()
-#     async def not_found(request):
-#         return {'Nothing': 'to see'}
-
-#
-# app = __hug__.http.server()
-#
-# async def _init_db(app):
-#     app.db = await init_db(
-#         host=MYSQL_HOST,
-#         db=MYSQL_DB_NAME,
-#         user=MYSQL_USER,
-#         password=MYSQL_PASSWORD,
-#         loop=loop
-#         )
-#     return app
-#
-# loop = asyncio.get_event_loop()
-# app = loop.run_until_complete(_init_db(app))
 
 @hug.post('/test_json_body', examples='"')
 async def a_test_json_body(body):
@@ -117,7 +65,6 @@ def extend_with():
 async def proccess_data(request):
     request.SERVER_NAME = 'Bacon'
 
-
 def user_is_not_tim(request, response, **kwargs):
     if request.headers.get('USER', '') != 'Tim':
         return True
@@ -126,7 +73,6 @@ def user_is_not_tim(request, response, **kwargs):
 @hug.get(requires=user_is_not_tim)
 async def hello_q(request):
     return 'Hi!'
-
 
 from tests.module_fake_simple import FakeSimpleException
 
@@ -177,4 +123,4 @@ async def test_error(data: raise_error):
 
 if __name__ == '__main__':
     api = __hug__.http
-    api.serve()
+    api.serve(8000)
