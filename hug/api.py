@@ -27,7 +27,7 @@ from collections import OrderedDict, namedtuple
 from functools import partial
 from itertools import chain
 from types import ModuleType
-# import aiohttp_debugtoolbar
+import aiohttp_debugtoolbar
 
 import asyncio, aiohttp
 # from aiohttp_session import session_middleware
@@ -238,8 +238,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
             app = self.aio_server(loop, None)
         else:
             app = self.aio_server(loop)
-        # if DEBUG:
-        #     aiohttp_debugtoolbar.setup(app, intercept_redirects=False)
+        if DEBUG:
+            aiohttp_debugtoolbar.setup(app, intercept_redirects=False)
 
         handler = app.make_handler()
         serv_generator = loop.create_server(handler, '127.0.0.1', port)
