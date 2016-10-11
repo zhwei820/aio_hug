@@ -27,7 +27,8 @@ from collections import OrderedDict, namedtuple
 from functools import partial
 from itertools import chain
 from types import ModuleType
-import aiohttp_debugtoolbar
+if DEBUG:
+    import aiohttp_debugtoolbar
 
 import asyncio, aiohttp
 # from aiohttp_session import session_middleware
