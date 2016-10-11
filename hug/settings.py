@@ -12,6 +12,4 @@ log.addHandler(ch)
 
 HTTP_METHODS = ('CONNECT', 'DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT', 'TRACE')
 
-# from settings import *
-#
-# print(DEBUG)
+from conf.settings import *
