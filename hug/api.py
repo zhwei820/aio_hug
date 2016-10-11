@@ -27,13 +27,13 @@ from collections import OrderedDict, namedtuple
 from functools import partial
 from itertools import chain
 from types import ModuleType
-if DEBUG:
-    import aiohttp_debugtoolbar
 
 import asyncio, aiohttp
 # from aiohttp_session import session_middleware
 from aiohttp import web
 from hug.settings import *
+if DEBUG:
+    import aiohttp_debugtoolbar
 
 from hug.middleware import not_found_middleware
 import hug.defaults
