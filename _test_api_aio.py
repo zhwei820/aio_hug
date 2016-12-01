@@ -168,6 +168,10 @@ def raise_error(value):
 async def test_error(data: raise_error):
     return True
 
+@hug.not_found()
+async def not_found():
+    return {'error': '404'}
+
 if __name__ == '__main__':
     api = __hug__.http
     api.serve(8082)
