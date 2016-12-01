@@ -28,7 +28,7 @@ from collections import OrderedDict, namedtuple
 from functools import partial
 from itertools import chain
 from types import ModuleType
-
+from aiohttp_swagger import *
 import asyncio, aiohttp
 # from aiohttp_session import session_middleware
 import uvloop
@@ -251,7 +251,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
             log.debug('Stop server begin')
             pass
         finally:
-            loop.run_until_complete(self.shutdown(app, handler))
+            loop.run_until_complete(self.shutdown(app))
             loop.close()
         log.debug('Stop server end')
 
@@ -345,6 +345,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
                                     app.router.add_route(method, router_base_url + '/v%s' % (ver) + url, routers[method_function][ver])
                                 else:
                                     app.router.add_route(method, router_base_url + '/v%s' % (ver) + url, routers[method_function][list(routers[method_function].keys())[0]])
+        if DEBUG:
+            setup_swagger(app)
 
         default_not_found = self.documentation_404() if default_not_found is True else None
         not_found_handler = default_not_found
@@ -357,9 +359,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
         return app
 
 
-    async def shutdown(self, app, handler):
+    async def shutdown(self, app):
         await app.shutdown()
-        await handler.finish_connections(10.0)
         await app.cleanup()
 
     def server(self, default_not_found=True, base_url=None):
