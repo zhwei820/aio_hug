@@ -213,10 +213,6 @@ class Interface(object):
         doc = OrderedDict if add_to is None else add_to
 
         usage = self.interface.spec.__doc__
-        print(usage)
-        print(self.interface.spec)
-        print()
-        print()
         if usage:
             doc['usage'] = usage
         if getattr(self, 'requires', None):
