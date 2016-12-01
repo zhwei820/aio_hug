@@ -26,19 +26,50 @@ from settings import *
 @hug.get("/ping")
 async def ping(request):
     """
+    Description end-point
+
     ---
-    description: This end-point allow to test that service is up.
     tags:
-    - Health check
+    -   user
+    summary: Create user
+    description: This can only be done by the logged in user.
+    operationId: examples.api.api.createUser
     produces:
-    - text/plain
+    -   application/json
+    parameters:
+    -   in: body
+        name: body
+        description: Created user object
+        required: false
+        schema:
+        type: object
+        properties:
+            id:
+            type: integer
+            format: int64
+            username:
+            type:
+                - "string"
+                - "null"
+            firstName:
+            type: string
+            lastName:
+            type: string
+            email:
+            type: string
+            password:
+            type: string
+            phone:
+            type: string
+            userStatus:
+            type: integer
+            format: int32
+            description: User Status
     responses:
-        "200":
-            description: successful operation. Return "pong" text
-        "405":
-            description: invalid HTTP Method
+    "201":
+        description: successful operation
     """
-    return web.Response(text="pong")
+    return "pong"
 
 
 async def hello():
@@ -66,8 +97,6 @@ async def async_test(request, response, aa):
 
 @hug.get("/async_test", versions = '2')
 async def async_test1(request, response, aa:hug.types.number, bb):
-    ''' doc for this end point
-    '''
     return 'test'
 
 @hug.post('/test_json_body', examples='"')

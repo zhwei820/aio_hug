@@ -3,5 +3,4 @@ import hug
 
 @hug.get()
 async def made_up_api():
-    """for testing"""
     return 'made_up'

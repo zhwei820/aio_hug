@@ -7,7 +7,6 @@ class FakeSimpleException(Exception):
 
 @hug.get()
 async def made_up_hello():
-    """for science!"""
     return 'hello'
 
 @hug.get('/exception')

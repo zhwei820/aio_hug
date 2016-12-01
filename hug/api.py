@@ -320,6 +320,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
             logging.basicConfig(level=logging.DEBUG)
 
         app = web.Application(loop=loop, middlewares=self._middleware)
+        routesdoc = {}
 
         for router_base_url, routes in self.routes.items():
             for url, methods in routes.items():
@@ -336,6 +337,10 @@ class HTTPInterfaceAPI(InterfaceAPI):
                     for method_function in routers.keys():
                         if routers[method_function].get(None):
                             app.router.add_route(method, router_base_url + url, routers[method_function][None], name=None)
+                            if router_base_url + url not in routesdoc:
+                                routesdoc[router_base_url + url] = {method: routers[method_function][None].interface.spec.__doc__}  # for doc
+                            else:
+                                routesdoc[router_base_url + url].update({method: routers[method_function][None].interface.spec.__doc__})  # for doc
 
                         if self.versions and self.versions != (None, ):
                             for ver in self.versions:
@@ -343,10 +348,19 @@ class HTTPInterfaceAPI(InterfaceAPI):
                                     continue
                                 if routers[method_function].get(ver):
                                     app.router.add_route(method, router_base_url + '/v%s' % (ver) + url, routers[method_function][ver])
+                                    if router_base_url + '/v%s' % (ver) + url not in routesdoc:
+                                        routesdoc[router_base_url + '/v%s' % (ver) + url] = {method: routers[method_function][ver].interface.spec.__doc__}  # for doc
+                                    else:
+                                        routesdoc[router_base_url + '/v%s' % (ver) + url].update({method: routers[method_function][ver].interface.spec.__doc__})  # for doc
                                 else:
                                     app.router.add_route(method, router_base_url + '/v%s' % (ver) + url, routers[method_function][list(routers[method_function].keys())[0]])
+                                    if router_base_url + '/v%s' % (ver) + url not in routesdoc:
+                                        routesdoc[router_base_url + '/v%s' % (ver) + url] = {method: routers[method_function][list(routers[method_function].keys())[0]].interface.spec.__doc__}  # for doc
+                                    else:
+                                        routesdoc[router_base_url + '/v%s' % (ver) + url].update({method: routers[method_function][list(routers[method_function].keys())[0]].interface.spec.__doc__})  # for doc
+
         if DEBUG:
-            setup_swagger(app)
+            setup_swagger(app, routesdoc)
 
         default_not_found = self.documentation_404() if default_not_found is True else None
         not_found_handler = default_not_found
