@@ -20,6 +20,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 """
 from __future__ import absolute_import
+import logging
 
 import json
 import sys
@@ -30,11 +31,9 @@ from types import ModuleType
 
 import asyncio, aiohttp
 # from aiohttp_session import session_middleware
+import uvloop
 from aiohttp import web
 from hug.settings import *
-if DEBUG:
-    import aiohttp_debugtoolbar
-
 from hug.middleware import not_found_middleware
 import hug.defaults
 import hug.output_format
@@ -234,29 +233,25 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
     def serve(self, port = 8071, no_documentation=False):
         """Runs the basic hug development server against this API"""
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         loop = asyncio.get_event_loop()
+
         if no_documentation:
             app = self.aio_server(loop, None)
         else:
             app = self.aio_server(loop)
-        if DEBUG:
-            aiohttp_debugtoolbar.setup(app, intercept_redirects=False)
+        web.run_app(app, host='127.0.0.1', port=port)
 
-        handler = app.make_handler()
-        serv_generator = loop.create_server(handler, '127.0.0.1', port)
-
-        serv = loop.run_until_complete(serv_generator)
         print(INTRO)
         print("Serving on port {0}...".format(port))
 
-        log.debug('start server %s' % str(serv.sockets[0].getsockname()))
         try:
             loop.run_forever()
         except KeyboardInterrupt:
             log.debug('Stop server begin')
             pass
         finally:
-            loop.run_until_complete(self.shutdown(serv, app, handler))
+            loop.run_until_complete(self.shutdown(app, handler))
             loop.close()
         log.debug('Stop server end')
 
@@ -321,6 +316,9 @@ class HTTPInterfaceAPI(InterfaceAPI):
                                                                               **kwargs)
 
     def aio_server(self, loop, default_not_found=True):
+        if DEBUG:
+            logging.basicConfig(level=logging.DEBUG)
+
         app = web.Application(loop=loop, middlewares=self._middleware)
 
         for router_base_url, routes in self.routes.items():
@@ -359,13 +357,10 @@ class HTTPInterfaceAPI(InterfaceAPI):
         return app
 
 
-    async def shutdown(self, server, app, handler):
-        server.close()
-        await server.wait_closed()
+    async def shutdown(self, app, handler):
         await app.shutdown()
         await handler.finish_connections(10.0)
         await app.cleanup()
-
 
     def server(self, default_not_found=True, base_url=None):
         """Returns a WSGI compatible API server for the given Hug API module"""
