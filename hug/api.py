@@ -86,7 +86,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
         self.sinks = OrderedDict()
         self.versioned = OrderedDict()
         self.base_url = base_url
-        self._middleware = [not_found_middleware]
+        self._middleware = set([not_found_middleware])
 
     @property
     def output_format(self):
@@ -117,9 +117,10 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
     def add_middleware(self, middleware):
         """Adds a middleware object used to process all incoming requests against the API"""
-        if self.middleware is None:
-            self._middleware = []
-        self.middleware.append(middleware)
+        if self._middleware is None:
+            self._middleware = set()
+
+        self._middleware.add(middleware)
 
     def add_sink(self, sink, url, base_url=""):
         base_url = base_url or self.base_url
@@ -319,9 +320,9 @@ class HTTPInterfaceAPI(InterfaceAPI):
         if DEBUG:
             logging.basicConfig(level=logging.DEBUG)
 
-        app = web.Application(loop=loop, middlewares=self._middleware)
-        routesdoc = {}
+        app = web.Application(loop=loop, middlewares=list(self._middleware))
 
+        routesdoc = {}
         for router_base_url, routes in self.routes.items():
             for url, methods in routes.items():
                 for method, versions in methods.items():

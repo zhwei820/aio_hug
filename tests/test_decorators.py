@@ -45,7 +45,9 @@ __hug_wsgi__ = __hug_wsgi__  # noqa
 async def hello_world():
     return "Hello World!"
 
+
 class API(object):
+
     @hug.call('/hello_world1')
     async def hello_world(self=None):
         return "Hello World!"
@@ -57,32 +59,40 @@ class API(object):
 #     async def hello_world_method(self):
 #         return "Hello World!"
 
+
 @hug.call()
 async def echo(text):
     return text
+
 
 @hug.call(on_invalid=lambda data: 'error')
 async def echo1(text):
     return text
 
+
 def handle_error(data, request, response):
     return 'errored'
+
 
 @hug.call(on_invalid=handle_error)
 async def echo2(text):
     return text
 
+
 @hug.get(output_invalid=hug.output_format.json, output=hug.output_format.file)
 async def echo3(text):
     return text
+
 
 @hug.get()
 async def implementation_1():
     return 1
 
+
 @hug.get()
 async def implementation_2():
     return 2
+
 
 @hug.get()
 async def smart_route(implementation: int):
@@ -93,21 +103,26 @@ async def smart_route(implementation: int):
     else:
         return "NOT IMPLEMENTED"
 
+
 @hug.call('/custom_route')
 async def method_name():
     return 'works'
+
 
 @hug.call()
 async def multiple_parameter_types(start, middle: hug.types.text, end: hug.types.number=5, **kwargs):
     return 'success'
 
+
 @hug.get(raise_on_invalid=True)
 async def my_handler(argument_1: int):
     return True
 
+
 @hug.get(output=hug.output_format.png_image)
 async def image():
     return 'artwork/logo.png'
+
 
 @hug.get(parameters=('parameter1', 'parameter2'))
 async def test_call(**kwargs):
@@ -143,7 +158,6 @@ async def test_basic_call_on_method(cli):
     # assert await resp.text() == '"Hello World!"'
 
 
-
 async def test_single_parameter(cli):
     """Test that an api with a single parameter interacts as desired"""
 
@@ -168,7 +182,8 @@ async def test_on_invalid_transformer(cli):
     assert await resp.text() == '"errored"'
 
     # resp = await cli.get('/echo')
-    # assert "required" in json.loads(await resp.text())['errors']['text'].lower()
+    # assert "required" in json.loads(await
+    # resp.text())['errors']['text'].lower()
 
 # async def test_on_invalid_format(cli):  # todo
 #     """Test to ensure it's possible to change the format based on a validation error"""
@@ -184,7 +199,8 @@ async def test_on_invalid_transformer(cli):
 
     # @hug.format.content_type(smart_output_type)
     # def output_formatter(data, request, response):
-    #     return hug.output_format.json((data, request and True, response and True))
+    # return hug.output_format.json((data, request and True, response and
+    # True))
 
     # @hug.get(output_invalid=output_formatter, output=hug.output_format.file)
     # def echo2(text):
@@ -199,7 +215,6 @@ async def test_on_invalid_transformer(cli):
 #
 #     resp = await cli.get('/smart_route?implementation=1')
 #     assert await resp.text() == '1'
-
 
     # assert hug.test.get(api, 'smart_route', implementation=1).data == 1
     # assert hug.test.get(api, 'smart_route', implementation=2).data == 2
@@ -259,20 +274,23 @@ async def test_parameters_override(cli):
 
     resp = await cli.get('/test_call?parameter1=one&parameter2=two')
     assert json.loads(await resp.text()) == {"parameter1": "one",
-                                   "parameter2": "two"}
+                                             "parameter2": "two"}
 
 
 @hug.call()
 async def inject_request(request):
     return 'success'
 
+
 @hug.call()
 async def inject_response(response):
     return response and 'success'
 
+
 @hug.call()
 async def inject_both(request, response):
     return response and 'success'
+
 
 @hug.call()
 async def wont_appear_in_kwargs(**kwargs):
@@ -297,25 +315,31 @@ async def test_parameter_injection(cli):
 async def method_get():
     return 'GET'
 
+
 @hug.post()
 async def method_post():
     return 'POST'
+
 
 @hug.connect()
 async def method_connect():
     return 'CONNECT'
 
+
 @hug.delete()
 async def method_delete():
     return 'DELETE'
+
 
 @hug.options()
 async def method_options():
     return 'OPTIONS'
 
+
 @hug.put()
 async def method_put():
     return 'PUT'
+
 
 @hug.trace()
 async def method_trace():
@@ -361,7 +385,7 @@ async def test_method_routing(cli):
 
 @hug.not_found()
 async def not_found_handler(response):
-    response.set_status(404)  #  todo
+    response.set_status(404)  # todo
     return "Not Found"
 
 async def test_not_found(cli):
@@ -376,6 +400,8 @@ async def test_not_found(cli):
     assert resp.status == 404
 
 import tests.module_fake
+
+
 @hug.extend_api()
 def extend_with():
     return (tests.module_fake, )
@@ -387,21 +413,26 @@ async def test_not_found_with_extended_api(cli):
     resp = await cli.get('/made_up_api')
     assert await resp.text() == '"made_up"'
 
+
 @hug.get('/echo11')
 async def echo11(text):
     return "Not version"
+
 
 @hug.get('/echo11', versions=1)  # noqa
 async def echo11(text):
     return text
 
+
 @hug.get('/echo11', versions=range(2, 4))  # noqa
 async def echo11(text):
     return "Echo: {text}".format(**locals())
 
+
 @hug.get('/echo11', versions=7)  # noqa
 async def echo11(text, api_version):
     return api_version
+
 
 @hug.get('/echo11', versions=False)  # noqa
 async def echo11(text):
@@ -426,13 +457,16 @@ async def test_versioning(cli):
     resp = await cli.get('/echo11?text=hi')
     assert await resp.text() == '"Not version"'
 
+
 @hug.get('/test_json')
 async def a_test_json(text):
     return text
 
+
 @hug.get('/test_json_body')
 async def a_test_json_body(body):
     return body
+
 
 @hug.get(parse_body=False)
 async def a_test_json_body_stream_only(body=None):
@@ -449,6 +483,7 @@ async def test_json_auto_convert(cli):
     resp = await cli.get('/a_test_json_body_stream_only')
     assert await resp.text() == 'null'
 
+
 @hug.get("/test_error")
 async def a_test_error():
     return aiohttp.web.HTTPInternalServerError()
@@ -464,6 +499,7 @@ async def test_error_handling(cli):
 def raise_error(value):
     raise KeyError('Invalid value')
 
+
 @hug.get('/test_error1')
 async def b_test_error(data: raise_error):
     return True
@@ -473,7 +509,6 @@ async def test_error_handling_builtin_exception(cli):
     resp = await cli.get('/test_error1?data=1')
     assert resp.status == 400
     assert json.loads(await resp.text())['errors']['data'] == 'Invalid value'
-
 
 
 @hug.get(output=hug.output_format.text)
@@ -490,9 +525,11 @@ def smart_output_type(response, request):
     if response and request:
         return 'application/json'
 
+
 @hug.format.content_type(smart_output_type)
 def output_formatter(data, request, response):
     return hug.output_format.json((data, request and True, response and True))
+
 
 @hug.get(output=output_formatter)
 async def output_test():
@@ -509,9 +546,11 @@ async def test_smart_outputter(cli):
 # def augmented(data):
 #     return hug.output_format.json(['Augmented', data])
 
+
 @hug.get(suffixes=('.js', '/js'), prefixes='/text')
 async def hello101():
     return "world"
+
 
 @pytest.mark.skipif(sys.platform == 'win32', reason='Currently failing on Windows build')
 async def test_output_format(cli):
@@ -531,7 +570,6 @@ async def test_output_format(cli):
     assert await resp.text() == '"world"'
 
 
-
 @hug.request_middleware()
 async def proccess_data(request):
     request.SERVER_NAME = 'Bacon'
@@ -540,10 +578,12 @@ async def proccess_data(request):
 # def proccess_data2(request, response, resource):
 #     response.set_header('Bacon', 'Yumm')
 
+
 @hug.get()
 async def hello545(request):
 
     return request.SERVER_NAME
+
 
 @pytest.mark.skipif(sys.platform == 'win32', reason='Currently failing on Windows build')
 async def test_middleware(cli):
@@ -556,6 +596,7 @@ def user_is_not_tim(request, response, **kwargs):
     if request.headers.get('USER', '') != 'Tim':
         return True
     return 'Unauthorized'
+
 
 @hug.get(requires=user_is_not_tim)
 async def hello_q(request):
@@ -572,9 +613,12 @@ async def test_requires(cli):
 
 
 import tests.module_fake
+
+
 @hug.extend_api('/aaa')
 def extend_with():
     return (tests.module_fake, )
+
 
 @hug.extend_api()
 def extend_with():
@@ -591,9 +635,11 @@ async def test_extending_api(cli):
 
 from tests.module_fake_simple import FakeSimpleException
 
+
 @hug.exception(FakeSimpleException)
 async def handle_exception(exception):
     return 'it works!'
+
 
 @hug.extend_api('/fake_simple')
 def extend_with():
@@ -605,6 +651,7 @@ async def test_extending_api_with_exception_handler(cli):
     resp = await cli.get('/fake_simple/exception')
     assert await resp.text() == '"it works!"'
 
+
 @hug.extend_api('/fake', base_url='/api')
 def extend_with():
     import tests.module_fake
@@ -615,9 +662,11 @@ async def test_extending_api_with_base_url(cli):
     resp = await cli.get('/api/v1/fake/made_up_api')
     assert await resp.text() == '"made_up"'
 
+
 @hug.get()
 async def made_up_hello():
     return 'hi'
+
 
 @hug.extend_api(base_url='/api')
 def extend_with():
@@ -636,6 +685,7 @@ async def test_extending_api_with_same_path_under_different_base_url(cli):
 @hug.get(response_headers={'name': 'Timothy'})
 async def endpoint():
     return ''
+
 
 @pytest.mark.skipif(sys.platform == 'win32', reason='Currently failing on Windows build')
 async def test_adding_headers(cli):
@@ -748,7 +798,7 @@ async def test_adding_headers(cli):
 #         return argument_1
 
 #     assert hug.test.post(hug_api, 'test_naive', body='{"argument_1": null}',
-#                          headers={'content-type': 'application/json'}).data == None
+# headers={'content-type': 'application/json'}).data == None
 
 
 #     @hug_api.route.http.post()
@@ -757,7 +807,7 @@ async def test_adding_headers(cli):
 
 
 #     assert 'errors' in hug.test.post(hug_api, 'test_text_type', body='{"argument_1": null}',
-#                                     headers={'content-type': 'application/json'}).data
+# headers={'content-type': 'application/json'}).data
 
 
 # def test_204_with_no_body(hug_api):  #pass
@@ -770,7 +820,7 @@ async def test_adding_headers(cli):
 #     assert '204' in hug.test.delete(hug_api, 'test_route').status
 
 
-#################################################################################
+##########################################################################
 
 
 # def test_return_modifer():
@@ -899,7 +949,6 @@ async def test_adding_headers(cli):
 #     assert hug.test.get(api, 'v1/one_more_level_of_indirection').data == 1
 #     assert one_more_level_of_indirection() == 1
 
-
     # @hug.default_output_format()
     # def jsonify(data):
     #     return hug.output_format.json(data)
@@ -956,7 +1005,6 @@ async def test_adding_headers(cli):
 #     assert resp.status == 404
 
 
-
 #     @hug.get()
 #     def my_endpoint2(hug_api):
 #         raise hug.HTTPNotFound()
@@ -985,8 +1033,6 @@ async def test_adding_headers(cli):
 #     hug_api.extend(api, '')
 
 #     assert hug.test.get(hug_api, 'my_endpoint').data == {'mutated': 'hello'}
-
-
 
 
 # def test_cli():
@@ -1371,7 +1417,6 @@ async def test_adding_headers(cli):
 #         pass
 
 #     assert happens_on_startup in api.http.startup_handlers
-
 
 
 # def test_cli_api(capsys):

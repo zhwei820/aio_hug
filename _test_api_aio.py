@@ -69,7 +69,7 @@ async def ping(request):
     "201":
         description: successful operation
     """
-    return "pong"
+    return "pong" / 0
 
 
 async def hello():

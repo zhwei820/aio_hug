@@ -43,7 +43,8 @@ def default_output_format(content_type='application/json', apply_globally=False,
         if apply_globally:
             hug.defaults.output_format = formatter
         else:
-            apply_to_api = hug.API(api) if api else hug.api.from_object(formatter)
+            apply_to_api = hug.API(
+                api) if api else hug.api.from_object(formatter)
             apply_to_api.http.output_format = formatter
         return formatter
     return decorator
@@ -56,7 +57,8 @@ def default_input_format(content_type='application/json', apply_globally=False, 
         if apply_globally:
             hug.defaults.input_format[content_type] = formatter
         else:
-            apply_to_api = hug.API(api) if api else hug.api.from_object(formatter)
+            apply_to_api = hug.API(
+                api) if api else hug.api.from_object(formatter)
             apply_to_api.http.set_input_format(content_type, formatter)
         return formatter
     return decorator
@@ -66,9 +68,11 @@ def directive(apply_globally=False, api=None):
     """A decorator that registers a single hug directive"""
     def decorator(directive_method):
         if apply_globally:
-            hug.defaults.directives[underscore(directive_method.__name__)] = directive_method
+            hug.defaults.directives[underscore(
+                directive_method.__name__)] = directive_method
         else:
-            apply_to_api = hug.API(api) if api else hug.api.from_object(directive_method)
+            apply_to_api = hug.API(
+                api) if api else hug.api.from_object(directive_method)
             apply_to_api.add_directive(directive_method)
         directive_method.directive = True
         return directive_method
@@ -78,7 +82,8 @@ def directive(apply_globally=False, api=None):
 def startup(api=None):
     """Runs the provided function on startup, passing in an instance of the api"""
     def startup_wrapper(startup_function):
-        apply_to_api = hug.API(api) if api else hug.api.from_object(startup_function)
+        apply_to_api = hug.API(
+            api) if api else hug.api.from_object(startup_function)
         apply_to_api.http.add_startup_handler(startup_function)
         return startup_function
     return startup_wrapper
@@ -87,7 +92,8 @@ def startup(api=None):
 def request_middleware(api=None):
     """Registers a middleware function that will be called on every request"""
     def decorator(middleware_method):
-        apply_to_api = hug.API(api) if api else hug.api.from_object(middleware_method)
+        apply_to_api = hug.API(
+            api) if api else hug.api.from_object(middleware_method)
 
         async def middle_handler(app, handler):
             async def middleware(request):
@@ -104,7 +110,8 @@ def request_middleware(api=None):
 def response_middleware(api=None):
     """Registers a middleware function that will be called on every response"""
     def decorator(middleware_method):
-        apply_to_api = hug.API(api) if api else hug.api.from_object(middleware_method)
+        apply_to_api = hug.API(
+            api) if api else hug.api.from_object(middleware_method)
 
         class MiddlewareRouter(object):
             __slots__ = ()
@@ -120,7 +127,8 @@ def response_middleware(api=None):
 def middleware_class(api=None):
     """Registers a middleware class"""
     def decorator(middleware_class):
-        apply_to_api = hug.API(api) if api else hug.api.from_object(middleware_class)
+        apply_to_api = hug.API(
+            api) if api else hug.api.from_object(middleware_class)
         apply_to_api.http.add_middleware(middleware_class())
         return middleware_class
     return decorator
@@ -129,7 +137,8 @@ def middleware_class(api=None):
 def extend_api(route="", api=None, base_url=""):
     """Extends the current api, with handlers from an imported api. Optionally provide a route that prefixes access"""
     def decorator(extend_with):
-        apply_to_api = hug.API(api) if api else hug.api.from_object(extend_with)
+        apply_to_api = hug.API(
+            api) if api else hug.api.from_object(extend_with)
         for extended_api in extend_with():
             apply_to_api.extend(extended_api, route, base_url)
         return extend_with
