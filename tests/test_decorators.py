@@ -24,10 +24,9 @@ import os
 import sys
 from unittest import mock
 
-import aiohttp
+import sanic
 import pytest
 import requests
-from hug.settings import *
 
 import hug
 
@@ -47,10 +46,10 @@ async def hello_world():
 
 
 class API(object):
-
     @hug.call('/hello_world1')
     async def hello_world(self=None):
         return "Hello World!"
+
 
 # class API1(object):  # todo
 #     def __init__(self):
@@ -110,7 +109,7 @@ async def method_name():
 
 
 @hug.call()
-async def multiple_parameter_types(start, middle: hug.types.text, end: hug.types.number=5, **kwargs):
+async def multiple_parameter_types(start, middle: hug.types.text, end: hug.types.number = 5, **kwargs):
     return 'success'
 
 
@@ -133,6 +132,7 @@ async def test_call(**kwargs):
 def cli(loop, test_client):
     app = api.http.aio_server(loop)
     return loop.run_until_complete(test_client(app))
+
 
 async def test_basic_call(cli):
     assert await hello_world() == "Hello World!"
@@ -172,6 +172,7 @@ async def test_single_parameter(cli):
     resp = await cli.get('/echo')
     assert "required" in json.loads(await resp.text())['errors']['text'].lower()
 
+
 async def test_on_invalid_transformer(cli):
     """Test to ensure it is possible to transform data when data is invalid"""
 
@@ -185,28 +186,29 @@ async def test_on_invalid_transformer(cli):
     # assert "required" in json.loads(await
     # resp.text())['errors']['text'].lower()
 
+
 # async def test_on_invalid_format(cli):  # todo
 #     """Test to ensure it's possible to change the format based on a validation error"""
 
 #     resp = await cli.get('/echo3?text=llll')
 #     assert await resp.text() == '"error"'
 
-    # assert isinstance(hug.test.get(api, '/echo').data, dict)
+# assert isinstance(hug.test.get(api, '/echo').data, dict)
 
-    # def smart_output_type(response, request):
-    #     if response and request:
-    #         return 'application/json'
+# def smart_output_type(response, request):
+#     if response and request:
+#         return 'application/json'
 
-    # @hug.format.content_type(smart_output_type)
-    # def output_formatter(data, request, response):
-    # return hug.output_format.json((data, request and True, response and
-    # True))
+# @hug.format.content_type(smart_output_type)
+# def output_formatter(data, request, response):
+# return hug.output_format.json((data, request and True, response and
+# True))
 
-    # @hug.get(output_invalid=output_formatter, output=hug.output_format.file)
-    # def echo2(text):
-    #     return text
+# @hug.get(output_invalid=output_formatter, output=hug.output_format.file)
+# def echo2(text):
+#     return text
 
-    # assert isinstance(hug.test.get(api, '/echo2').data, (list, tuple))
+# assert isinstance(hug.test.get(api, '/echo2').data, (list, tuple))
 
 
 #
@@ -216,9 +218,9 @@ async def test_on_invalid_transformer(cli):
 #     resp = await cli.get('/smart_route?implementation=1')
 #     assert await resp.text() == '1'
 
-    # assert hug.test.get(api, 'smart_route', implementation=1).data == 1
-    # assert hug.test.get(api, 'smart_route', implementation=2).data == 2
-    # assert hug.test.get(api, 'smart_route', implementation=3).data == "NOT IMPLEMENTED"
+# assert hug.test.get(api, 'smart_route', implementation=1).data == 1
+# assert hug.test.get(api, 'smart_route', implementation=2).data == 2
+# assert hug.test.get(api, 'smart_route', implementation=3).data == "NOT IMPLEMENTED"
 
 async def test_custom_url(cli):
     """Test to ensure that it's possible to have a route that differs from the function name"""
@@ -228,6 +230,7 @@ async def test_custom_url(cli):
 
     resp = await cli.post('/custom_route')
     assert await resp.text() == '"works"'
+
 
 # # def test_api_auto_initiate(): # not checked yet
 # #     """Test to ensure that Hug automatically exposes a wsgi server method"""
@@ -248,11 +251,13 @@ async def test_parameters(cli):
     resp = await cli.get('/multiple_parameter_types?start=start&middle=middle&end=nan')
     assert "end" in json.loads(await resp.text())['errors'].keys()
 
+
 async def test_parameters(cli):
     """Tests to ensure that Hug can easily handle multiple parameters with multiple types"""
 
     resp = await cli.get('/multiple_parameter_types?start=start&middle=middle&end=7')
     assert await resp.text() == '"success"'
+
 
 async def test_raise_on_invalid(cli):
     """Test to ensure hug correctly respects a request to allow validations errors to pass through as exceptions"""
@@ -268,6 +273,7 @@ async def test_range_request(cli):
     """Test to ensure that requesting a range works as expected"""
 
     resp = await cli.get('/image', headers={'range': 'bytes=0-100'})
+
 
 async def test_parameters_override(cli):
     """Test to ensure the parameters override is handled as expected"""
@@ -295,6 +301,7 @@ async def inject_both(request, response):
 @hug.call()
 async def wont_appear_in_kwargs(**kwargs):
     return 'request' not in kwargs and 'response' not in kwargs and 'success'
+
 
 async def test_parameter_injection(cli):
     """Tests that hug correctly auto injects variables such as request and response"""
@@ -350,6 +357,7 @@ async def method_trace():
 async def accepts_get_and_post():
     return 'success'
 
+
 async def test_method_routing(cli):
     """Test that all hugs HTTP routers correctly route methods to the correct handler"""
 
@@ -388,6 +396,7 @@ async def not_found_handler(response):
     response.set_status(404)  # todo
     return "Not Found"
 
+
 async def test_not_found(cli):
     """Test to ensure the not_found decorator correctly routes 404s to the correct handler"""
 
@@ -399,12 +408,14 @@ async def test_not_found(cli):
     assert await resp.text() == '"Not Found"'
     assert resp.status == 404
 
+
 import tests.module_fake
 
 
 @hug.extend_api()
 def extend_with():
-    return (tests.module_fake, )
+    return (tests.module_fake,)
+
 
 async def test_not_found_with_extended_api(cli):
     """Test to ensure the not_found decorator works correctly when the API is extended"""
@@ -472,6 +483,7 @@ async def a_test_json_body(body):
 async def a_test_json_body_stream_only(body=None):
     return body
 
+
 async def test_json_auto_convert(cli):
     """Test to ensure all types of data correctly auto convert into json"""
     resp = await cli.get('/test_json?text=hi')
@@ -486,9 +498,10 @@ async def test_json_auto_convert(cli):
 
 @hug.get("/test_error")
 async def a_test_error():
-    return aiohttp.web.HTTPInternalServerError()
-    # raise aiohttp.web.HTTPFound('/redirect')
-    # return aiohttp.web.HTTPFound('/redirect')
+    return sanic.web.HTTPInternalServerError()
+    # raise sanic.web.HTTPFound('/redirect')
+    # return sanic.web.HTTPFound('/redirect')
+
 
 async def test_error_handling(cli):
     """Test to ensure Hug correctly handles Falcon errors that are thrown during processing"""
@@ -504,6 +517,7 @@ def raise_error(value):
 async def b_test_error(data: raise_error):
     return True
 
+
 async def test_error_handling_builtin_exception(cli):
     """Test to ensure built in exception types errors are handled as expected"""
     resp = await cli.get('/test_error1?data=1')
@@ -514,6 +528,7 @@ async def test_error_handling_builtin_exception(cli):
 @hug.get(output=hug.output_format.text)
 async def stream_test():
     return open(os.path.join(BASE_DIRECTORY, 'README.md'), 'rb')
+
 
 async def test_stream_return(cli):
     """Test to ensure that its valid for a hug API endpoint to return a stream"""
@@ -540,6 +555,7 @@ async def test_smart_outputter(cli):
     """Test to ensure that the output formatter can accept request and response arguments"""
     resp = await cli.get('/output_test')
     assert 'true' in await resp.text()
+
 
 #
 # @hug.default_output_format()
@@ -574,6 +590,7 @@ async def test_output_format(cli):
 async def proccess_data(request):
     request.SERVER_NAME = 'Bacon'
 
+
 # @hug.response_middleware()  # not understand
 # def proccess_data2(request, response, resource):
 #     response.set_header('Bacon', 'Yumm')
@@ -581,7 +598,6 @@ async def proccess_data(request):
 
 @hug.get()
 async def hello545(request):
-
     return request.SERVER_NAME
 
 
@@ -602,6 +618,7 @@ def user_is_not_tim(request, response, **kwargs):
 async def hello_q(request):
     return 'Hi!'
 
+
 async def test_requires(cli):
     """Test to ensure only if requirements successfully keep calls from happening"""
 
@@ -617,12 +634,12 @@ import tests.module_fake
 
 @hug.extend_api('/aaa')
 def extend_with():
-    return (tests.module_fake, )
+    return (tests.module_fake,)
 
 
 @hug.extend_api()
 def extend_with():
-    return (tests.module_fake, )
+    return (tests.module_fake,)
 
 
 async def test_extending_api(cli):
@@ -632,6 +649,7 @@ async def test_extending_api(cli):
 
     resp = await cli.get('/aaa/made_up_api')
     assert await resp.text() == '"made_up"'
+
 
 from tests.module_fake_simple import FakeSimpleException
 
@@ -644,7 +662,8 @@ async def handle_exception(exception):
 @hug.extend_api('/fake_simple')
 def extend_with():
     import tests.module_fake_simple
-    return (tests.module_fake_simple, )
+    return (tests.module_fake_simple,)
+
 
 async def test_extending_api_with_exception_handler(cli):
     """Test to ensure it's possible to extend the current API from an external file"""
@@ -655,7 +674,8 @@ async def test_extending_api_with_exception_handler(cli):
 @hug.extend_api('/fake', base_url='/api')
 def extend_with():
     import tests.module_fake
-    return (tests.module_fake, )
+    return (tests.module_fake,)
+
 
 async def test_extending_api_with_base_url(cli):
     """Test to ensure it's possible to extend the current API with a specified base URL"""
@@ -671,7 +691,8 @@ async def made_up_hello():
 @hug.extend_api(base_url='/api')
 def extend_with():
     import tests.module_fake_simple
-    return (tests.module_fake_simple, )
+    return (tests.module_fake_simple,)
+
 
 async def test_extending_api_with_same_path_under_different_base_url(cli):
     """Test to ensure it's possible to extend the current API with the same path under a different base URL"""
@@ -694,7 +715,6 @@ async def test_adding_headers(cli):
     resp = await cli.get('/endpoint')
     assert await resp.text() == '""'
     assert resp.headers['name'] == 'Timothy'
-
 
 # @pytest.mark.skipif(sys.platform == 'win32', reason='Currently failing on Windows build')
 # def test_exceptions():    todo
@@ -949,18 +969,18 @@ async def test_adding_headers(cli):
 #     assert hug.test.get(api, 'v1/one_more_level_of_indirection').data == 1
 #     assert one_more_level_of_indirection() == 1
 
-    # @hug.default_output_format()
-    # def jsonify(data):
-    #     return hug.output_format.json(data)
-    #
-    # api.http.output_format = hug.output_format.text
-    #
-    # @hug.get()
-    # def my_method():
-    #     return {'Should': 'work'}
-    #
-    # assert hug.test.get(api, 'my_method').data == "{'Should': 'work'}"
-    # api.http.output_format = old_formatter
+# @hug.default_output_format()
+# def jsonify(data):
+#     return hug.output_format.json(data)
+#
+# api.http.output_format = hug.output_format.text
+#
+# @hug.get()
+# def my_method():
+#     return {'Should': 'work'}
+#
+# assert hug.test.get(api, 'my_method').data == "{'Should': 'work'}"
+# api.http.output_format = old_formatter
 
 #
 # @pytest.mark.skipif(sys.platform == 'win32', reason='Currently failing on Windows build')

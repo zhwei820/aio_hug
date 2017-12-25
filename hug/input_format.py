@@ -21,13 +21,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 """
 from __future__ import absolute_import
 
-import json as json_converter
-import re
-from cgi import parse_multipart
-from urllib.parse import parse_qs as urlencoded_converter
+import ujson as json_converter
+from urllib.parse import parse_qs
+from cgi import parse_header
 
-from urllib.parse import urlparse, parse_qsl
-from aiohttp import MultiDict
+from sanic.request import RequestParameters, parse_multipart_form
 from hug.format import content_type, underscore
 
 
@@ -56,33 +54,27 @@ def _underscore_dict(dictionary):
     return new_dictionary
 
 
-def json_underscore(body, charset='utf-8', **kwargs):
+async def json_underscore(body, charset='utf-8', **kwargs):
     """Converts JSON formatted date to native Python objects.
 
     The keys in any JSON dict are transformed from camelcase to underscore separated words.
     """
-    return _underscore_dict(json(body, charset=charset))
+    return _underscore_dict(await json(body, charset=charset))
 
 
 @content_type('application/x-www-form-urlencoded')
 async def urlencoded(body, charset='ascii', **kwargs):
     """Converts query strings into native Python objects"""
     stream = await body.read()
-    # return parse_query_string(stream.decode(charset), False)
-    return MultiDict(parse_qsl(urlparse(stream.decode(charset)).query))
+    return RequestParameters(
+        parse_qs(stream.decode('utf-8')))
 
 
 @content_type('multipart/form-data')  # get from post ()
 async def multipart(body, **header_params):
-    # """Converts multipart form data into native Python objects"""
-    # if header_params and 'boundary' in header_params:
-    #     if type(header_params['boundary']) is str:
-    #         header_params['boundary'] = header_params['boundary'].encode()
-    # print(header_params)
-    # print(body)
-    # form = parse_multipart((body.stream if hasattr(body, 'stream') else body), header_params)
-    # for key, value in form.items():
-    #     if type(value) is list and len(value) is 1:
-    #         form[key] = value[0]
-    # return form
-    return {}
+    content_type, parameters = parse_header('multipart/form-data')
+    boundary = parameters['boundary'].encode('utf-8')
+    parsed_form, parsed_files = (
+        parse_multipart_form(body, boundary))
+    parsed_files.update(parsed_form)
+    return parsed_files

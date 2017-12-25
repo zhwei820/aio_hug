@@ -22,8 +22,8 @@ from __future__ import absolute_import
 import logging
 import uuid
 from datetime import datetime
-import aiohttp
-import hug
+import sanic
+
 
 class SessionMiddleware(object):
     """Simple session middleware.
@@ -83,7 +83,7 @@ class SessionMiddleware(object):
 
 class LogMiddleware(object):
     """A middleware that logs all incoming requests and outgoing responses that make their way through the API"""
-    __slots__ = ('logger', )
+    __slots__ = ('logger',)
 
     def __init__(self, logger=None):
         self.logger = logger if logger is not None else logging.getLogger('hug')
@@ -92,8 +92,8 @@ class LogMiddleware(object):
         """Given a request/response pair, generate a logging format similar to the NGINX combined style."""
         current_time = datetime.utcnow()
         return '{0} - - [{1}] {2} {3} {4} {5} {6}'.format(request.remote_addr, current_time, request.method,
-                                                        request.relative_uri, response.status,
-                                                        len(response.data), request.user_agent)
+                                                          request.relative_uri, response.status,
+                                                          len(response.data), request.user_agent)
 
     def process_request(self, request, response):
         """Logs the basic endpoint requested"""
@@ -111,9 +111,10 @@ async def not_found_middleware(app, handler):
             if response.status == 404:
                 return await app._not_found(request)
             return response
-        except aiohttp.web.HTTPException as ex:
+        except sanic.web.HTTPException as ex:
             if ex.status == 404:
                 return await app._not_found(request)
 
             raise
+
     return middleware_handler

@@ -26,7 +26,6 @@ from __future__ import absolute_import
 
 from functools import partial
 from timeit import default_timer as python_timer
-from hug.settings import *
 
 from hug import introspect
 

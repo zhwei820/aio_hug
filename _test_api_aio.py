@@ -20,8 +20,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 """
 import hug, asyncio
-from aiohttp import web, MsgType
 from settings import *
+
 
 @hug.get("/ping")
 async def ping(request):
@@ -76,101 +76,126 @@ async def hello():
     await asyncio.sleep(10)
     return "haha"
 
+
 @hug.get("/hello")
 async def hello_world():
     res = await hello()
     return res
+
 
 class API(object):
     @hug.get('/hello_world1')
     async def hello_world(self=None):
         return "Hello World!"
 
+
 @hug.get(output=hug.output_format.png_image)
 async def image():
     return 'artwork/logo.png'
 
-@hug.post("/async_test", versions = '1', examples="/async_test?aa=1")
+
+@hug.post("/async_test", versions='1', examples="/async_test?aa=1")
 async def async_test(request, response, aa):
     return {"code": 0, "message": "test ok!"}
 
 
-@hug.get("/async_test", versions = '2')
-async def async_test1(request, response, aa:hug.types.number, bb):
+@hug.get("/async_test", versions='2')
+async def async_test1(request, response, aa: hug.types.number, bb):
     return 'test'
+
 
 @hug.post('/test_json_body', examples='"')
 async def a_test_json_body(body):
     return body
 
+
 import tests.module_fake
+
+
 @hug.extend_api('/aaa')
 def extend_with():
-    return (tests.module_fake, )
+    return (tests.module_fake,)
+
 
 @hug.request_middleware()
 async def proccess_data(request):
     request.SERVER_NAME = 'Bacon'
+
 
 def user_is_not_tim(request, response, **kwargs):
     if request.headers.get('USER', '') != 'Tim':
         return True
     return 'Unauthorized'
 
+
 @hug.get(requires=user_is_not_tim)
 async def hello_q(request):
     return 'Hi!'
 
+
 from tests.module_fake_simple import FakeSimpleException
+
 
 @hug.exception(FakeSimpleException)
 async def handle_exception(exception):
     return 'it works!'
 
+
 @hug.extend_api('/fake_simple')
 def extend_with1():
     import tests.module_fake_simple
-    return (tests.module_fake_simple, )
+    return (tests.module_fake_simple,)
+
 
 @hug.post()
 async def test_url_encoded_post(**kwargs):
     return kwargs
 
+
 @hug.post()
 async def test_multipart_post(**kwargs):
     return kwargs
 
+
 @hug.post()
 async def test_naive(argument_1):
     return argument_1
+
 
 @hug.delete()
 async def test_route(response):
     response.set_status(204)
     return
 
+
 def contains_either(fields):
     if not 'one' in fields and not 'two' in fields:
         return {'one': 'must be defined', 'two': 'must be defined'}
+
 
 @hug.get(validate=contains_either)
 async def my_endpoint1(one=None, two=None):
     return True
 
+
 class Error(Exception):
     def __str__(self):
         return 'Error'
 
+
 def raise_error(value):
     raise Error()
+
 
 @hug.get()
 async def test_error(data: raise_error):
     return True
 
+
 @hug.not_found()
 async def not_found():
     return {'error': '404'}
+
 
 if __name__ == '__main__':
     api = __hug__.http

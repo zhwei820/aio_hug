@@ -24,7 +24,7 @@ from __future__ import absolute_import
 import base64
 import binascii
 
-import aiohttp
+import sanic
 
 
 def authenticator(function, challenges=()):
@@ -39,11 +39,11 @@ def authenticator(function, challenges=()):
         def authenticate(request, response, **kwargs):
             result = function(request, response, verify_user, **kwargs)
             if result is None:
-                raise aiohttp.web.HTTPForbidden('Authentication Required',
+                raise sanic.web.HTTPForbidden('Authentication Required',
                                        'Please provide valid {0} credentials'.format(function.__doc__.splitlines()[0]))
 
             if result is False:
-                raise aiohttp.web.HTTPForbidden('Invalid Authentication',
+                raise sanic.web.HTTPForbidden('Invalid Authentication',
                                        'Provided {0} credentials were invalid'.format(function.__doc__.splitlines()[0]))
 
             request.context['user'] = result
@@ -68,7 +68,7 @@ def basic(request, response, verify_user, realm='simple', **kwargs):
     try:
         auth_type, user_and_key = http_auth.split(' ', 1)
     except ValueError:
-        raise aiohttp.web.HTTPForbidden('Authentication Error',
+        raise sanic.web.HTTPForbidden('Authentication Error',
                                'Authentication header is improperly formed')
 
     if auth_type.lower() == 'basic':
@@ -79,7 +79,7 @@ def basic(request, response, verify_user, realm='simple', **kwargs):
                 response.set_header('WWW-Authenticate', '')
                 return user
         except (binascii.Error, ValueError):
-            raise aiohttp.web.HTTPForbidden('Authentication Error',
+            raise sanic.web.HTTPForbidden('Authentication Error',
                                    'Unable to determine user and password with provided encoding')
     return False
 

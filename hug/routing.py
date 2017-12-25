@@ -34,12 +34,12 @@ import hug.interface
 import hug.output_format
 from hug import introspect
 from hug.exceptions import InvalidTypeData
-from hug.settings import *
+
 
 
 class Router(object):
     """The base chainable router object"""
-    __slots__ = ('route', )
+    __slots__ = ('route',)
 
     def __init__(self, transform=None, output=None, validate=None, api=None, requires=(), **kwargs):
         self.route = {}
@@ -52,7 +52,7 @@ class Router(object):
         if api:
             self.route['api'] = api
         if requires:
-            self.route['requires'] = (requires, ) if not isinstance(requires, (tuple, list)) else requires
+            self.route['requires'] = (requires,) if not isinstance(requires, (tuple, list)) else requires
 
     def output(self, formatter, **overrides):
         """Sets the output formatter that should be used to render this route"""
@@ -79,7 +79,9 @@ class Router(object):
     def doesnt_require(self, requirements, **overrides):
         """Removes individual requirements while keeping all other defined ones within a route"""
         return self.where(requires=tuple(set(self.route.get('requires', ())).difference(requirements if
-                                                            type(requirements) in (list, tuple) else (requirements, ))))
+                                                                                        type(requirements) in (
+                                                                                            list, tuple) else (
+            requirements,))))
 
     def where(self, **overrides):
         """Creates a new route, based on the current route, with the specified overrided values"""
@@ -91,32 +93,7 @@ class Router(object):
 class CLIRouter(Router):
     """The CLIRouter provides a chainable router that can be used to route a CLI command to a Python function"""
     __slots__ = ()
-
-    def __init__(self, name=None, version=None, doc=None, **kwargs):
-        super().__init__(**kwargs)
-        if name is not None:
-            self.route['name'] = name
-        if version:
-            self.route['version'] = version
-        if doc:
-            self.route['doc'] = doc
-
-    def name(self, name, **overrides):
-        """Sets the name for the CLI interface"""
-        return self.where(name=name, **overrides)
-
-    def version(self, version, **overrides):
-        """Sets the version for the CLI interface"""
-        return self.where(version=version, **overrides)
-
-    def doc(self, documentation, **overrides):
-        """Sets the documentation for the CLI interface"""
-        return self.where(doc=documentation, **overrides)
-
-    def __call__(self, api_function):
-        """Enables exposing a Hug compatible function as a Command Line Interface"""
-        hug.interface.CLI(self.route, api_function)
-        return api_function
+    pass
 
 
 class InternalValidation(Router):
@@ -154,29 +131,7 @@ class InternalValidation(Router):
 
 class LocalRouter(InternalValidation):
     """The LocalRouter defines how interfaces should be handled when accessed locally from within Python code"""
-    __slots__ = ()
-
-    def __init__(self, directives=True, validate=True, version=None, **kwargs):
-        super().__init__(**kwargs)
-        if version is not None:
-            self.route['version'] = version
-        if not directives:
-            self.route['skip_directives'] = True
-        if not validate:
-            self.route['skip_validation'] = True
-
-    def directives(self, use=True, **kwargs):
-        return self.where(directives=use)
-
-    def validate(self, enforce=True, **kwargs):
-        return self.where(validate=enforce)
-
-    def version(self, supported, **kwargs):
-        return self.where(version=supported)
-
-    def __call__(self, api_function):
-        """Enables exposing a hug compatible function locally"""
-        return hug.interface.Local(self.route, api_function)
+    pass
 
 
 class HTTPRouter(InternalValidation):
@@ -186,7 +141,7 @@ class HTTPRouter(InternalValidation):
     def __init__(self, versions=None, parse_body=False, parameters=None, defaults={}, status=None,
                  response_headers=None, private=False, **kwargs):
         super().__init__(**kwargs)
-        self.route['versions'] = (versions, ) if isinstance(versions, (int, float, None.__class__)) else versions
+        self.route['versions'] = (versions,) if isinstance(versions, (int, float, None.__class__)) else versions
         if parse_body:
             self.route['parse_body'] = parse_body
         if parameters:
@@ -273,19 +228,19 @@ class SinkRouter(HTTPRouter):
     def __init__(self, urls=None, output=None, **kwargs):
         super().__init__(output=output, **kwargs)
         if urls:
-            self.route['urls'] = (urls, ) if isinstance(urls, str) else urls
+            self.route['urls'] = (urls,) if isinstance(urls, str) else urls
 
     def __call__(self, api_function):
         api = self.route.get('api', hug.api.from_object(api_function))
         (interface, callable_method) = self._create_interface(api, api_function)
-        for base_url in self.route.get('urls', ("/{0}".format(api_function.__name__), )):
+        for base_url in self.route.get('urls', ("/{0}".format(api_function.__name__),)):
             api.http.add_sink(interface, base_url)
         return callable_method
 
 
 class StaticRouter(SinkRouter):
     """Provides a chainable router that can be used to return static files automatically from a set of directories"""
-    __slots__ = ('route', )
+    __slots__ = ('route',)
 
     def __init__(self, urls=None, output=hug.output_format.file, cache=False, **kwargs):
         super().__init__(urls=urls, output=output, **kwargs)
@@ -303,7 +258,7 @@ class StaticRouter(SinkRouter):
             directories.append(path)
 
         api = self.route.get('api', hug.api.from_object(api_function))
-        for base_url in self.route.get('urls', ("/{0}".format(api_function.__name__), )):
+        for base_url in self.route.get('urls', ("/{0}".format(api_function.__name__),)):
             def read_file(request=None, path=""):
                 filename = path.lstrip("/")
                 for directory in directories:
@@ -316,6 +271,7 @@ class StaticRouter(SinkRouter):
                         return path
 
                 hug.redirect.not_found()
+
             api.http.add_sink(self._create_interface(api, read_file)[0], base_url)
         return api_function
 
@@ -324,9 +280,9 @@ class ExceptionRouter(HTTPRouter):
     """Provides a chainable router that can be used to route exceptions thrown during request handling"""
     __slots__ = ()
 
-    def __init__(self, exceptions=(Exception, ), output=None, **kwargs):
+    def __init__(self, exceptions=(Exception,), output=None, **kwargs):
         super().__init__(output=output, **kwargs)
-        self.route['exceptions'] = (exceptions, ) if not isinstance(exceptions, (list, tuple)) else exceptions
+        self.route['exceptions'] = (exceptions,) if not isinstance(exceptions, (list, tuple)) else exceptions
 
     def __call__(self, api_function):
         api = self.route.get('api', hug.api.from_object(api_function))
@@ -347,15 +303,15 @@ class URLRouter(HTTPRouter):
         super().__init__(output=output, versions=versions, parse_body=parse_body, response_headers=response_headers,
                          **kwargs)
         if urls is not None:
-            self.route['urls'] = (urls, ) if isinstance(urls, str) else urls
+            self.route['urls'] = (urls,) if isinstance(urls, str) else urls
         if accept:
-            self.route['accept'] = (accept, ) if isinstance(accept, str) else accept
+            self.route['accept'] = (accept,) if isinstance(accept, str) else accept
         if examples:
-            self.route['examples'] = (examples, ) if isinstance(examples, str) else examples
+            self.route['examples'] = (examples,) if isinstance(examples, str) else examples
         if suffixes:
-            self.route['suffixes'] = (suffixes, ) if isinstance(suffixes, str) else suffixes
+            self.route['suffixes'] = (suffixes,) if isinstance(suffixes, str) else suffixes
         if prefixes:
-            self.route['prefixes'] = (prefixes, ) if isinstance(prefixes, str) else prefixes
+            self.route['prefixes'] = (prefixes,) if isinstance(prefixes, str) else prefixes
 
     def __call__(self, api_function):
         api = self.route.get('api', hug.api.from_object(api_function))
@@ -364,9 +320,9 @@ class URLRouter(HTTPRouter):
 
         use_examples = self.route.get('examples', ())
         if not interface.required and not use_examples:
-            use_examples = (True, )
+            use_examples = (True,)
 
-        for base_url in self.route.get('urls', ("/{0}".format(api_function.__name__), )):
+        for base_url in self.route.get('urls', ("/{0}".format(api_function.__name__),)):
             expose = [base_url, ]
             for suffix in self.route.get('suffixes', ()):
                 if suffix.startswith('/'):

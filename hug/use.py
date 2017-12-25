@@ -26,7 +26,7 @@ import socket
 from collections import namedtuple
 from io import BytesIO
 from queue import Queue
-import aiohttp
+import sanic
 
 import requests
 
@@ -138,7 +138,7 @@ class Local(Service):
             return Response('Not Found', 404, {'content-type', 'application/json'})
 
         interface = function.interface.http
-        response = aiohttp.web.Response()
+        response = sanic.web.Response()
         request = Request(None, None, empty.dict)
         interface.set_response_defaults(response)
 

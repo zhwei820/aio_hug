@@ -28,12 +28,16 @@ from collections import OrderedDict, namedtuple
 from functools import partial
 from itertools import chain
 from types import ModuleType
-from aiohttp_swagger import *
-import asyncio, aiohttp
-# from aiohttp_session import session_middleware
+import sanic
+# from sanic_session import session_middleware
 import uvloop
-from aiohttp import web
-from hug.settings import *
+
+from sanic import Sanic
+# from sanic_jinja2 import SanicJinja2
+# from sanic_session import InMemorySessionInterface
+
+from settings import config
+
 from hug.middleware import not_found_middleware
 import hug.defaults
 import hug.output_format
@@ -68,7 +72,7 @@ class InterfaceAPI(object):
     """Defines the per-interface API which defines all shared information for a specific interface, and how it should
         be exposed
     """
-    __slots__ = ('api', )
+    __slots__ = ('api',)
 
     def __init__(self, api):
         self.api = api
@@ -133,9 +137,9 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
         return self._exception_handlers.get(version, self._exception_handlers.get(None, None))
 
-    def add_exception_handler(self, exception_type, error_handler, versions=(None, )):
+    def add_exception_handler(self, exception_type, error_handler, versions=(None,)):
         """Adds a error handler to the hug api"""
-        versions = (versions, ) if not isinstance(versions, (tuple, list)) else versions
+        versions = (versions,) if not isinstance(versions, (tuple, list)) else versions
         if not hasattr(self, '_exception_handlers'):
             self._exception_handlers = {}
         for version in versions:
@@ -221,7 +225,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
                         if version is None:
                             applies_to = versions
                         else:
-                            applies_to = (version, )
+                            applies_to = (version,)
                         for version in applies_to:
                             if api_version and version != api_version:
                                 continue
@@ -232,29 +236,21 @@ class HTTPInterfaceAPI(InterfaceAPI):
         documentation['handlers'] = version_dict
         return documentation
 
-    def serve(self, port = 8071, no_documentation=False):
+    def serve(self, port=8005, no_documentation=False):
         """Runs the basic hug development server against this API"""
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-        loop = asyncio.get_event_loop()
 
         if no_documentation:
-            app = self.aio_server(loop, None)
+            app = self.aio_server(None)
         else:
-            app = self.aio_server(loop)
-        web.run_app(app, host='127.0.0.1', port=port)
+            app = self.aio_server()
+
+        app.run(host=config['HOST'],
+                port=config['PORT'],
+                debug=config['DEBUG'],
+                workers=config['WORKER'])
 
         print(INTRO)
         print("Serving on port {0}...".format(port))
-
-        try:
-            loop.run_forever()
-        except KeyboardInterrupt:
-            log.debug('Stop server begin')
-            pass
-        finally:
-            loop.run_until_complete(self.shutdown(app))
-            loop.close()
-        log.debug('Stop server end')
 
     @staticmethod
     def base_404(request, response, *kargs, **kwargs):
@@ -285,14 +281,14 @@ class HTTPInterfaceAPI(InterfaceAPI):
         if len(request_version) > 1:
             raise ValueError('You are requesting conflicting versions')
 
-        return next(iter(request_version or (None, )))
+        return next(iter(request_version or (None,)))
 
     def documentation_404(self, base_url=None):
         """Returns a smart 404 page that contains documentation for the written API"""
         base_url = self.base_url if base_url is None else base_url
 
         async def handle_404(request, *kargs, **kwargs):
-            response = aiohttp.web.Response()
+            response = sanic.web.Response()
             url_prefix = self.base_url
             if not url_prefix:
                 url_prefix = 'http://%s' % (request.host)
@@ -305,6 +301,7 @@ class HTTPInterfaceAPI(InterfaceAPI):
             response.set_status(404)
             response.content_type = 'application/json'
             return response
+
         return handle_404
 
     def version_router(self, request, response, api_version=None, versions={}, not_found=None, **kwargs):
@@ -316,11 +313,11 @@ class HTTPInterfaceAPI(InterfaceAPI):
                                                                               api_version=api_version,
                                                                               **kwargs)
 
-    def aio_server(self, loop, default_not_found=True):
-        if DEBUG:
+    def aio_server(self, default_not_found=True):
+        if config['DEBUG']:
             logging.basicConfig(level=logging.DEBUG)
 
-        app = web.Application(loop=loop, middlewares=list(self._middleware))
+        app = Sanic("hug", log_config=config['logging'])
 
         routesdoc = {}
         for router_base_url, routes in self.routes.items():
@@ -337,31 +334,42 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
                     for method_function in routers.keys():
                         if routers[method_function].get(None):
-                            app.router.add_route(method, router_base_url + url, routers[method_function][None], name=None)
+                            app.add_route(method, router_base_url + url, routers[method_function][None], )
                             if router_base_url + url not in routesdoc:
-                                routesdoc[router_base_url + url] = {method: routers[method_function][None].interface.spec.__doc__}  # for doc
+                                routesdoc[router_base_url + url] = {
+                                    method: routers[method_function][None].interface.spec.__doc__}  # for doc
                             else:
-                                routesdoc[router_base_url + url].update({method: routers[method_function][None].interface.spec.__doc__})  # for doc
+                                routesdoc[router_base_url + url].update(
+                                    {method: routers[method_function][None].interface.spec.__doc__})  # for doc
 
-                        if self.versions and self.versions != (None, ):
+                        if self.versions and self.versions != (None,):
                             for ver in self.versions:
                                 if ver == None:
                                     continue
                                 if routers[method_function].get(ver):
-                                    app.router.add_route(method, router_base_url + '/v%s' % (ver) + url, routers[method_function][ver])
+                                    app.add_route(method, router_base_url + '/v%s' % (ver) + url,
+                                                  routers[method_function][ver])
                                     if router_base_url + '/v%s' % (ver) + url not in routesdoc:
-                                        routesdoc[router_base_url + '/v%s' % (ver) + url] = {method: routers[method_function][ver].interface.spec.__doc__}  # for doc
+                                        routesdoc[router_base_url + '/v%s' % (ver) + url] = {
+                                            method: routers[method_function][ver].interface.spec.__doc__}  # for doc
                                     else:
-                                        routesdoc[router_base_url + '/v%s' % (ver) + url].update({method: routers[method_function][ver].interface.spec.__doc__})  # for doc
+                                        routesdoc[router_base_url + '/v%s' % (ver) + url].update(
+                                            {method: routers[method_function][ver].interface.spec.__doc__})  # for doc
                                 else:
-                                    app.router.add_route(method, router_base_url + '/v%s' % (ver) + url, routers[method_function][list(routers[method_function].keys())[0]])
+                                    app.add_route(method, router_base_url + '/v%s' % (ver) + url,
+                                                  routers[method_function][
+                                                      list(routers[method_function].keys())[0]])
                                     if router_base_url + '/v%s' % (ver) + url not in routesdoc:
-                                        routesdoc[router_base_url + '/v%s' % (ver) + url] = {method: routers[method_function][list(routers[method_function].keys())[0]].interface.spec.__doc__}  # for doc
+                                        routesdoc[router_base_url + '/v%s' % (ver) + url] = {
+                                            method: routers[method_function][list(routers[method_function].keys())[
+                                                0]].interface.spec.__doc__}  # for doc
                                     else:
-                                        routesdoc[router_base_url + '/v%s' % (ver) + url].update({method: routers[method_function][list(routers[method_function].keys())[0]].interface.spec.__doc__})  # for doc
+                                        routesdoc[router_base_url + '/v%s' % (ver) + url].update({method: routers[
+                                            method_function][list(routers[method_function].keys())[
+                                            0]].interface.spec.__doc__})  # for doc
 
-        if DEBUG:
-            setup_swagger(app, routesdoc)
+        # if DEBUG:
+        #     setup_swagger(app, routesdoc)
 
         default_not_found = self.documentation_404() if default_not_found is True else None
         not_found_handler = default_not_found
@@ -372,7 +380,6 @@ class HTTPInterfaceAPI(InterfaceAPI):
         if not_found_handler:
             app._not_found = not_found_handler
         return app
-
 
     async def shutdown(self, app):
         await app.shutdown()
@@ -398,12 +405,13 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
         self.startup_handlers.append(handler)
 
+
 HTTPInterfaceAPI.base_404.interface = True
 
 
 class CLIInterfaceAPI(InterfaceAPI):
     """Defines the CLI interface specific API"""
-    __slots__ = ('commands', )
+    __slots__ = ('commands',)
 
     def __init__(self, api, version=''):
         super().__init__(api)
@@ -460,7 +468,7 @@ class API(object, metaclass=ModuleSingleton):
 
     def directive(self, name, default=None):
         """Returns the loaded directive with the specified name, or default if passed name is not present"""
-        return getattr(self, '_directives', {}).get(name,  hug.defaults.directives.get(name, default))
+        return getattr(self, '_directives', {}).get(name, hug.defaults.directives.get(name, default))
 
     def add_directive(self, directive):
         self._directives = getattr(self, '_directives', {})

@@ -27,7 +27,7 @@ import sys
 from collections import OrderedDict
 from functools import lru_cache, partial, wraps
 
-import aiohttp
+import sanic
 
 import hug._empty as empty
 import hug.api
@@ -207,7 +207,6 @@ class Interface(object):
             if conclusion and conclusion is not True:
                 return conclusion
 
-
     def documentation(self, add_to=None):
         """Produces general documentation for the interface"""
         doc = OrderedDict if add_to is None else add_to
@@ -221,9 +220,9 @@ class Interface(object):
         doc['outputs']['format'] = self.outputs.__doc__
         doc['outputs']['content_type'] = self.outputs.content_type
         parameters = [param for param in self.parameters if not param in ('request', 'response', 'self')
-                                                        and not param in ('api_version', 'body')
-                                                        and not param.startswith('hug_')
-                                                        and not hasattr(param, 'directive')]
+                      and not param in ('api_version', 'body')
+                      and not param.startswith('hug_')
+                      and not hasattr(param, 'directive')]
         if parameters:
             inputs = doc.setdefault('inputs', OrderedDict())
             types = self.interface.spec.__annotations__
@@ -243,179 +242,12 @@ class Interface(object):
 
 class Local(Interface):
     """Defines the Interface responsible for exposing functions locally"""
-    __slots__ = ('skip_directives', 'skip_validation', 'version')
-
-    def __init__(self, route, function):
-        super().__init__(route, function)
-        self.version = route.get('version', None)
-        if 'skip_directives' in route:
-            self.skip_directives = True
-        if 'skip_validation' in route:
-            self.skip_validation = True
-
-        self.interface.local = self
-
-    def __get__(self, instance, kind):
-        """Support instance methods"""
-        return partial(self.__call__, instance) if instance else self.__call__
-
-    @property
-    def __name__(self):
-        return self.interface.spec.__name__
-
-    @property
-    def __module__(self):
-        return self.interface.spec.__module__
-
-    def __call__(self, *args, **kwargs):
-        """Defines how calling the function locally should be handled"""
-        for requirement in self.requires:
-            lacks_requirement = self.check_requirements()
-            if lacks_requirement:
-                return self.outputs(lacks_requirement) if self.outputs else lacks_requirement
-
-        for index, argument in enumerate(args):
-            kwargs[self.parameters[index]] = argument
-
-        if not getattr(self, 'skip_directives', False):
-            for parameter, directive in self.directives.items():
-                if parameter in kwargs:
-                    continue
-                arguments = (self.defaults[parameter], ) if parameter in self.defaults else ()
-                kwargs[parameter] = directive(*arguments, api=self.api, api_version=self.version,
-                                              interface=self)
-
-        if not getattr(self, 'skip_validation', False):
-            errors = self.validate(kwargs)
-            if errors:
-                errors = {'errors': errors}
-                if getattr(self, 'on_invalid', False):
-                    errors = self.on_invalid(errors)
-                outputs = getattr(self, 'invalid_outputs', self.outputs)
-                return outputs(errors) if outputs else errors
-
-        result = self.interface(**kwargs)
-        if self.transform:
-            result = self.transform(result)
-        return self.outputs(result) if self.outputs else result
+    pass
 
 
 class CLI(Interface):
     """Defines the Interface responsible for exposing functions to the CLI"""
-
-    def __init__(self, route, function):
-        super().__init__(route, function)
-        self.interface.cli = self
-
-        used_options = {'h', 'help'}
-        nargs_set = self.interface.takes_kargs
-        self.parser = argparse.ArgumentParser(description=route.get('doc', self.interface.spec.__doc__))
-        if 'version' in route:
-            self.parser.add_argument('-v', '--version', action='version',
-                                version="{0} {1}".format(route.get('name', self.interface.spec.__name__),
-                                                         route['version']))
-            used_options.update(('v', 'version'))
-
-        for option in self.interface.parameters:
-            if option in self.directives:
-                continue
-
-            if option in self.interface.required:
-                args = (option, )
-            else:
-                short_option = option[0]
-                while short_option in used_options and len(short_option) < len(option):
-                    short_option = option[:len(short_option) + 1]
-
-                used_options.add(short_option)
-                used_options.add(option)
-                if short_option != option:
-                    args = ('-{0}'.format(short_option), '--{0}'.format(option))
-                else:
-                    args = ('--{0}'.format(option), )
-
-            kwargs = {}
-            if option in self.defaults:
-                kwargs['default'] = self.defaults[option]
-            if option in self.interface.input_transformations:
-                transform = self.interface.input_transformations[option]
-                kwargs['type'] = transform
-                kwargs['help'] = transform.__doc__
-                if transform in (list, tuple) or isinstance(transform, types.Multiple):
-                    kwargs['action'] = 'append'
-                    kwargs['type'] = Text()
-                elif transform == bool or isinstance(transform, type(types.boolean)):
-                    kwargs['action'] = 'store_true'
-                elif isinstance(transform, types.OneOf):
-                    kwargs['choices'] = transform.values
-            elif (option in self.interface.spec.__annotations__ and
-                  type(self.interface.spec.__annotations__[option]) == str):
-                kwargs['help'] = option
-            if ((kwargs.get('type', None) == bool or kwargs.get('action', None) == 'store_true') and
-                 not kwargs['default']):
-                kwargs['action'] = 'store_true'
-                kwargs.pop('type', None)
-            elif kwargs.get('action', None) == 'store_true':
-                kwargs.pop('action', None) == 'store_true'
-
-            if option == getattr(self.interface, 'karg', None) or ():
-                kwargs['nargs'] = '*'
-            elif not nargs_set and kwargs.get('action', None) == 'append' and not option in self.interface.defaults:
-                kwargs['nargs'] = '*'
-                kwargs.pop('action', '')
-                nargs_set = True
-
-            self.parser.add_argument(*args, **kwargs)
-
-        self.api.cli.commands[route.get('name', self.interface.spec.__name__)] = self
-
-    @property
-    def outputs(self):
-        return getattr(self, '_outputs', hug.output_format.text)
-
-    @outputs.setter
-    def outputs(self, outputs):
-        self._outputs = outputs
-
-    def output(self, data):
-        """Outputs the provided data using the transformations and output format specified for this CLI endpoint"""
-        if self.transform:
-            data = self.transform(data)
-        if hasattr(data, 'read'):
-            data = data.read().decode('utf8')
-        if data is not None:
-            data = self.outputs(data)
-            if data:
-                sys.stdout.buffer.write(data)
-                if not data.endswith(b'\n'):
-                    sys.stdout.buffer.write(b'\n')
-        return data
-
-    def __call__(self):
-        """Calls the wrapped function through the lens of a CLI ran command"""
-        for requirement in self.requires:
-            conclusion = requirement(request=sys.argv, module=self.api.module)
-            if conclusion and conclusion is not True:
-                return self.output(conclusion)
-
-        pass_to_function = vars(self.parser.parse_known_args()[0])
-        for option, directive in self.directives.items():
-            arguments = (self.defaults[option], ) if option in self.defaults else ()
-            pass_to_function[option] = directive(*arguments, api=self.api, argparse=self.parser,
-                                                 interface=self)
-
-        if getattr(self, 'validate_function', False):
-            errors = self.validate_function(pass_to_function)
-            if errors:
-                return self.output(errors)
-
-        if hasattr(self.interface, 'karg'):
-            karg_values = pass_to_function.pop(self.interface.karg, ())
-            result = self.interface(*karg_values, **pass_to_function)
-        else:
-            result = self.interface(**pass_to_function)
-
-        return self.output(result)
+    pass
 
 
 class HTTP(Interface):
@@ -478,7 +310,7 @@ class HTTP(Interface):
         if 'api_version' in self.all_parameters:
             input_parameters['api_version'] = api_version
         for parameter, directive in self.directives.items():
-            arguments = (self.defaults[parameter], ) if parameter in self.defaults else ()
+            arguments = (self.defaults[parameter],) if parameter in self.defaults else ()
             input_parameters[parameter] = directive(*arguments, response=response, request=request,
                                                     api=self.api, api_version=api_version, interface=self)
 
@@ -543,7 +375,7 @@ class HTTP(Interface):
         if getattr(self, 'invalid_outputs', False):
             response.content_type = self.invalid_content_type(request, response)
             response.body = self.invalid_outputs(data, **self._arguments(self._params_for_invalid_outputs,
-                                                                            request, response))
+                                                                         request, response))
         else:
             response.body = self.outputs(data, **self._arguments(self._params_for_outputs, request, response))
         return response
@@ -591,7 +423,7 @@ class HTTP(Interface):
 
     async def __call__(self, request, api_version=None, **kwargs):
         """Call the wrapped function over HTTP pulling information as needed"""
-        response = aiohttp.web.Response()
+        response = sanic.web.Response()
         api_version = int(api_version) if api_version is not None else api_version
         if not self.catch_exceptions:
             exception_types = ()
@@ -620,7 +452,7 @@ class HTTP(Interface):
                 handler = self.api.http.exception_handlers(api_version)[type(exception)]
             else:
                 for exception_type, exception_handler in \
-                  tuple(self.api.http.exception_handlers(api_version).items())[::-1]:
+                    tuple(self.api.http.exception_handlers(api_version).items())[::-1]:
                     if isinstance(exception, exception_type):
                         handler = exception_handler
             return await handler(request=request, exception=exception, **kwargs)

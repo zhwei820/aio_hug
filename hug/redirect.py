@@ -20,15 +20,19 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 """
 from __future__ import absolute_import
-import aiohttp
+import sanic
+from sanic.response import redirect, html
+
 
 def to(location, code=302):
     """Redirects to the specified location using the provided http_code (defaults to HTTP_302 FOUND)"""
-    raise aiohttp.web.HTTPFound(location)
+    return redirect(location, code)
+
 
 def permanent(location):
     """Redirects to the specified location using HTTP 301 status code"""
     to(location, 301)
+
 
 def found(location):
     """Redirects to the specified location using HTTP 302 status code"""
@@ -47,4 +51,4 @@ def temporary(location):
 
 def not_found(*args, **kwargs):
     """Redirects request handling to the not found render"""
-    raise aiohttp.web.HTTPNotFound()
+    raise html(b"", 404)
