@@ -334,7 +334,8 @@ class HTTPInterfaceAPI(InterfaceAPI):
 
                     for method_function in routers.keys():
                         if routers[method_function].get(None):
-                            app.add_route(method, router_base_url + url, routers[method_function][None], )
+                            app.add_route(handler=routers[method_function][None], uri=router_base_url + url,
+                                          methods=[method])
                             if router_base_url + url not in routesdoc:
                                 routesdoc[router_base_url + url] = {
                                     method: routers[method_function][None].interface.spec.__doc__}  # for doc
@@ -347,8 +348,9 @@ class HTTPInterfaceAPI(InterfaceAPI):
                                 if ver == None:
                                     continue
                                 if routers[method_function].get(ver):
-                                    app.add_route(method, router_base_url + '/v%s' % (ver) + url,
-                                                  routers[method_function][ver])
+                                    app.add_route(handler=routers[method_function][ver],
+                                                  uri=router_base_url + '/v%s' % (ver) + url,
+                                                  methods=[method])
                                     if router_base_url + '/v%s' % (ver) + url not in routesdoc:
                                         routesdoc[router_base_url + '/v%s' % (ver) + url] = {
                                             method: routers[method_function][ver].interface.spec.__doc__}  # for doc
@@ -356,9 +358,11 @@ class HTTPInterfaceAPI(InterfaceAPI):
                                         routesdoc[router_base_url + '/v%s' % (ver) + url].update(
                                             {method: routers[method_function][ver].interface.spec.__doc__})  # for doc
                                 else:
-                                    app.add_route(method, router_base_url + '/v%s' % (ver) + url,
-                                                  routers[method_function][
-                                                      list(routers[method_function].keys())[0]])
+                                    app.add_route(
+                                        handler=routers[method_function][list(routers[method_function].keys())[0]],
+                                        uri=router_base_url + '/v%s' % (ver) + url,
+                                        methods=[method]
+                                    )
                                     if router_base_url + '/v%s' % (ver) + url not in routesdoc:
                                         routesdoc[router_base_url + '/v%s' % (ver) + url] = {
                                             method: routers[method_function][list(routers[method_function].keys())[
