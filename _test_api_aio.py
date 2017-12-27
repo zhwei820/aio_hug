@@ -199,4 +199,4 @@ async def not_found():
 
 if __name__ == '__main__':
     api = __hug__.http
-    api.serve(8082)
+    api.serve()
